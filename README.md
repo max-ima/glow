@@ -25,7 +25,7 @@ You can support this project by making a donation to help ensure its sustainabil
 * **Privacy First:** Your data stays on your machine; no information is transferred to external servers.
 * **Pure Performance:** Developed exclusively in **C# and .NET Framework** with no external libraries or dependencies.
 * **Portable:** No installation required. Just download it, extract all files from the ZIP, select the appropriate architecture, and run it.
-* **Saving Data:** The ability to save all features offered in the interface as a **Text Document**, **HTML Document** and **Markdown Document**, if desired.
+* **Saving Data:** The ability to save all features offered in the interface as a **Text Document**, **HTML Document**, **Markdown Document** and **JSON Document**, if desired.
 * **System Identity:** Unique device ID generation for hardware verification (Shortcut: `CTRL + 6`).
 * **Modern UI:** Clean, intuitive interface compatible with Windows 11 design language, featuring Light, Dark, and System themes.
 * **Multilingual:** It supports 16 different languages, primarily English. You can access the supported languages here: [Supported Languages](https://github.com/turkaysoft/glow/discussions/20)
