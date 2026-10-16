@@ -10,8 +10,10 @@ using System.Windows.Forms;
 //
 using static Glow.TSModules;
 
-namespace Glow.glow_tools{
-    public partial class GlowSFCandDISMAutoTool : Form{
+namespace Glow.glow_tools
+{
+    public partial class GlowSFCandDISMAutoTool : Form
+    {
         // FIELDS
         // ======================================================================================================
         private Stopwatch sadtStopwatch;
@@ -19,23 +21,66 @@ namespace Glow.glow_tools{
         private bool processStatus = true;
         private string titleMessage;
         private string processStatusMessage;
-        // Compiled regexes. DISM/SFC always return English output.
+        private const int SadtProcessTimeoutMs = 90 * 60 * 1000; // 90 min (sfc/DISM can legitimately take 15-30+ min)
         private static readonly Regex sadtProgressRegex = new Regex(@"(\d{1,3}(?:\.\d{1,2})?)%", RegexOptions.Compiled);
-        private static readonly Regex sadtRepairableRegex = new Regex(@"repairable", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex sadtSfcRepairedRegex = new Regex(@"successfully repaired", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex sadtSfcFailedRegex = new Regex(@"unable to fix|unable to repair|but was unable|could not perform|could not repair", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex sadtRestoreFailedRegex = new Regex(@"restore.*failed|restore operation failed|error:\s*0x", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private sealed class SadtCommand{
+        private static readonly Regex sadtRepairableRegex = new Regex(
+            @"repairable|onarılabilir|reparierbar|r[ée]parable|reparable|riparabile|repar[áa]vel|herstelbaar|repareerbaar|mo[żz]na naprawi[ćc]|nadaje si[ęe] do naprawy|подлежит восстановлению|можно восстановить|قابل للإصلاح|可修复|可修復|修復可能|복구 가능|मरम्मत योग्य",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex sadtNonRepairableRegex = new Regex(
+            @"non[\s\-]?repairable|not repairable|onar[ıi]lamaz|nicht reparierbar|non r[ée]parable|no reparable|non riparabile|n[ãa]o repar[áa]vel|niet herstelbaar|nie nadaje si[ęe] do naprawy|не подлежит восстановлению|غير قابل للإصلاح|不可修复|不可修復|修復不可能|복구 불가|मरम्मत योग्य नहीं",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex sadtSfcRepairedRegex = new Regex(
+            @"successfully repaired|ba[şs]ar[ıi]yla onard[ıi]|erfolgreich repariert|les a r[ée]par[ée]s|repar[óo] correctamente|reparados correctamente|ripristinati|reparou com [êe]xito|com [êe]xito|succesvol hersteld|met succes hersteld|pomy[śs]lnie.*naprawi|naprawiono|успешно.*восстанови|восстановлены|تم إصلاحها بنجاح|بنجاح.*إصلاح|成功修复|成功修復|正常に修復|성공적으로 복구|सफलतापूर्वक.*मरम्मत",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex sadtSfcFailedRegex = new Regex(
+            @"unable to fix|unable to repair|but was unable|could not perform|could not repair|"
+            + @"onaramad[ıi]|onar[ıi]lamad[ıi]|ger[çc]ekle[şs]tiremedi|"
+            + @"konnte.*nicht reparieren|konnte.*nicht ausf[üu]hren|"
+            + @"n'a pas pu.*r[ée]parer|n'a pas pu effectuer|impossible d'effectuer|"
+            + @"no pudo reparar|no pudo realizar|no se pudo realizar|"
+            + @"non [èe] stato possibile|impossibile eseguire|"
+            + @"n[ãa]o foi poss[íi]vel|n[ãa]o p[ôo]de executar|mas n[ãa]o foi poss[íi]vel|"
+            + @"kon.*niet herstellen|kon de aangevraagde bewerking niet uitvoeren|"
+            + @"nie mog[łl]a naprawi[ćc]|nie mo[żz]na by[łl]o wykona[ćc]|nie mog[łl]a wykona[ćc]|"
+            + @"не смогла исправить|не удалось выполнить|не удалось исправить|"
+            + @"تعذر.*إصلاح|تعذر.*تنفيذ|"
+            + @"无法修复|无法执行|無法修復|無法執行|"
+            + @"修復できませんでした|実行できませんでした|"
+            + @"수정하지 못했습니다|수행할 수 없습니다|복구하지 못했습니다|"
+            + @"असमर्थ|नहीं कर सका|ठीक करने में असमर्थ",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex sadtRestoreFailedRegex = new Regex(
+            @"restore.*failed|restore operation failed|the repair content could not be found|source files could not be found|error:\s*0x|0x800f|0x8007|hresult|"
+            + @"geri y[üu]kleme.*ba[şs]ar[ıi]s[ıi]z|geri y[üu]kleme.*hatas[ıi]|onar[ıi]m i[çc]eri[ğg]i bulunamad[ıi]|"
+            + @"wiederherstellung.*fehlgeschlagen|reparaturquelle.*nicht gefunden|"
+            + @"restauration.*[ée]chec|[ée]chec de la restauration|"
+            + @"restauraci[óo]n.*error|no se pudo.*restaurar|origen.*no se encontr|"
+            + @"ripristino.*non riuscito|ripristino.*fallito|origine.*non trovata|"
+            + @"restaura[çc][ãa]o.*falhou|falha na restaura[çc][ãa]o|"
+            + @"herstel.*mislukt|herstelbron.*niet gevonden|"
+            + @"przywracanie.*nie powiod[łl]o|odzyskiwanie.*nie powiod[łl]o|nie znaleziono [źz]r[óo]d[łl]a|"
+            + @"восстановление.*не удалось|сбой.*восстановления|не удалось найти источник|"
+            + @"فشلت.*الاستعادة|تعذر.*الاستعادة|تعذر العثور على المصدر|"
+            + @"还原.*失败|找不到源文件|還原.*失敗|找不到來源檔案|"
+            + @"復元.*失敗|ソースが見つかりません|"
+            + @"복원.*실패|원본.*찾을 수 없|"
+            + @"पुनर्स्थापना.*विफल|स्रोत.*नहीं मिला",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex sadtCbsCannotRepairRegex = new Regex(@"cannot repair member file", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private sealed class SadtCommand
+        {
             public readonly string FileName;
             public readonly string Arguments;
             public readonly string Display;
-            public SadtCommand(string fileName, string args, string display){ FileName = fileName; Arguments = args; Display = display; }
+            public SadtCommand(string fileName, string args, string display) { FileName = fileName; Arguments = args; Display = display; }
         }
         public GlowSFCandDISMAutoTool() { InitializeComponent(); }
         // DYNAMIC THEME VOID
         // ======================================================================================================
-        public void GTool_SADT_Preloader(){
-            try{
+        public void GTool_SADT_Preloader()
+        {
+            try
+            {
                 TSThemeModeHelper.InitializeThemeForForm(this);
                 //
                 BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor");
@@ -60,7 +105,8 @@ namespace Glow.glow_tools{
                 Text = titleMessage;
                 //
                 SADT_L1.Text = software_lang.TSReadLangs("DISMandSFCTool", "sadt_sub_title");
-                if (!GlowMain.SFCandDISMprocessStatus){
+                if (!GlowMain.SFCandDISMprocessStatus)
+                {
                     SADT_L2.Text = software_lang.TSReadLangs("DISMandSFCTool", "sadt_description");
                 }
                 SADT_L3.Text = software_lang.TSReadLangs("DISMandSFCTool", "sadt_last_repair_time");
@@ -68,85 +114,150 @@ namespace Glow.glow_tools{
                 string lastFixDate = software_read_settings.TSReadSettings(ts_settings_container, "SADTime");
                 SADT_L4.Text = !string.IsNullOrWhiteSpace(lastFixDate) ? lastFixDate : software_lang.TSReadLangs("DISMandSFCTool", "sadt_not_start");
                 SADT_StartBtn.Text = " " + software_lang.TSReadLangs("DISMandSFCTool", "sadt_start_engine");
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GTool_SADT_Preloader()"); }
+            }
+        }
+        // UI DPI
+        // ======================================================================================================
+        protected override void OnDpiChanged(DpiChangedEventArgs e)
+        {
+            base.OnDpiChanged(e);
+            try
+            {
+                GTool_SADT_Preloader();
+                this.PerformLayout();
+                this.Invalidate(true);
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "OnDpiChanged()"); }
             }
         }
         // LOAD
         // ======================================================================================================
-        private void GlowSFCandDISMAutoTool_Load(object sender, EventArgs e){
-            try{
+        private void GlowSFCandDISMAutoTool_Load(object sender, EventArgs e)
+        {
+            try
+            {
                 GTool_SADT_Preloader();
                 sadtStopwatch = new Stopwatch();
-                sadtUiTimer = new Timer{
+                sadtUiTimer = new Timer
+                {
                     Interval = 500
                 };
-                sadtUiTimer.Tick += (s, ev) => {
+                sadtUiTimer.Tick += (s, ev) =>
+                {
                     if (!sadtStopwatch.IsRunning) return;
                     var eTime = sadtStopwatch.Elapsed;
                     this.Text = titleMessage + $" - {eTime:hh\\:mm\\:ss}";
                     int msToNextSecond = 1000 - eTime.Milliseconds;
                     sadtUiTimer.Interval = Math.Max(50, msToNextSecond);
                 };
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GlowSFCandDISMAutoTool_Load()"); }
             }
         }
         // SFC AND DISM AUTO TOOL START ENGINE BTN
         // ======================================================================================================
-        private void SADT_StartBtn_Click(object sender, EventArgs e){
-            try{
-                if (GlowMain.SFCandDISMprocessStatus){
+        private void SADT_StartBtn_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (GlowMain.SFCandDISMprocessStatus)
+                {
                     return;
                 }
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 DialogResult sadt_start_check = TS_MessageBoxEngine.TS_MessageBox(this, 5, string.Format(software_lang.TSReadLangs("DISMandSFCTool", "sadt_engine_start_notification"), "\n\n"));
-                if (sadt_start_check == DialogResult.Yes){
+                if (sadt_start_check == DialogResult.Yes)
+                {
                     SADT_StartBtn.Enabled = false;
                     GlowMain.SFCandDISMprocessStatus = true;
                     Task sadt_engine_bg = Task.Run(SadtEngine);
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SADT_StartBtn_Click()"); }
             }
         }
+        // SYSTEM32 EXE RESOLVER (avoids PATH dependency)
+        // ======================================================================================================
+        private static string GetSadtSystem32()
+        {
+            try
+            {
+                string windir = Environment.GetEnvironmentVariable("windir");
+                if (string.IsNullOrWhiteSpace(windir))
+                    windir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                if (!string.IsNullOrWhiteSpace(windir))
+                    return Path.Combine(windir, "System32");
+            }
+            catch { }
+            return string.Empty;
+        }
         // SFC AND DISM AUTO TOOL ENGINE
         // ======================================================================================================
-        private void SadtEngine(){
+        private void SadtEngine()
+        {
             processStatus = true;
             processStatusMessage = string.Empty;
             //
             var repairedCommands = new List<string>();
             bool isComponentStoreCorrupt = false;
             //
-            try{
+            try
+            {
                 sadtStopwatch?.Restart();
-            }catch { }
-            try{
+            }
+            catch { }
+            try
+            {
                 if (sadtUiTimer != null) BeginInvoke(new Action(() => { try { sadtUiTimer.Start(); } catch { } }));
-            }catch { }
+            }
+            catch { }
             //
             TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
             string process_message = software_lang.TSReadLangs("DISMandSFCTool", "sadt_current_running_pro");
             //
-            try{
+            try
+            {
+                string sadtSys32 = GetSadtSystem32();
                 var engineCommands = new[] {
-                    new SadtCommand("DISM.exe", "/Online /Cleanup-Image /CheckHealth", "DISM /Online /Cleanup-Image /CheckHealth"),
-                    new SadtCommand("DISM.exe", "/Online /Cleanup-Image /ScanHealth", "DISM /Online /Cleanup-Image /ScanHealth"),
-                    new SadtCommand("DISM.exe", "/Online /Cleanup-Image /RestoreHealth", "DISM /Online /Cleanup-Image /RestoreHealth"),
-                    new SadtCommand("sfc.exe", "/scannow", "sfc /scannow")
+                    new SadtCommand(Path.Combine(sadtSys32, "DISM.exe"), "/Online /Cleanup-Image /CheckHealth /English", "DISM /Online /Cleanup-Image /CheckHealth"),
+                    new SadtCommand(Path.Combine(sadtSys32, "DISM.exe"), "/Online /Cleanup-Image /ScanHealth /English", "DISM /Online /Cleanup-Image /ScanHealth"),
+                    new SadtCommand(Path.Combine(sadtSys32, "DISM.exe"), "/Online /Cleanup-Image /RestoreHealth /English", "DISM /Online /Cleanup-Image /RestoreHealth"),
+                    new SadtCommand(Path.Combine(sadtSys32, "sfc.exe"), "/scannow", "sfc /scannow")
                 };
                 //
                 GlowMain.SFCandDISMprocessStatus = true;
                 UpdateSafeEnabled(SADT_StartBtn, false);
                 //
-                foreach (var cmd in engineCommands){
+                foreach (var cmd in engineCommands)
+                {
+                    bool isRestoreCmd = cmd.Arguments.IndexOf("/RestoreHealth", StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (isRestoreCmd && !isComponentStoreCorrupt)
+                    {
+                        continue;
+                    }
                     UpdateSafeText(SADT_L2, string.Format(software_lang.TSReadLangs("DISMandSFCTool", "sadt_current_running"), cmd.Display, "\n\n"));
                     //
-                    Encoding encoding = cmd.Display.StartsWith("sfc", StringComparison.OrdinalIgnoreCase) ? Encoding.Unicode : Encoding.Default;
+                    Encoding encoding = cmd.Display.StartsWith("sfc", StringComparison.OrdinalIgnoreCase) ? Encoding.Unicode : GetSadtOutputEncoding();
                     int exitCode = RunSadtProcess(cmd.FileName, cmd.Arguments, encoding, cmd.Display, process_message, out string combinedOutput);
                     //
-                    if (exitCode != 0){
+                    if (exitCode != 0)
+                    {
+                        if (sadtRestoreFailedRegex.IsMatch(combinedOutput) || sadtSfcFailedRegex.IsMatch(combinedOutput) || sadtNonRepairableRegex.IsMatch(combinedOutput))
+                        {
+                            processStatus = false;
+                            processStatusMessage = "[Exit Code: " + exitCode + "]\n\n" + TruncateSadtOutput(combinedOutput);
+                            break;
+                        }
                         processStatus = false;
                         processStatusMessage = "[Exit Code: " + exitCode + "]\n\n" + TruncateSadtOutput(combinedOutput);
                         break;
@@ -154,49 +265,83 @@ namespace Glow.glow_tools{
                     bool isDism = cmd.Display.StartsWith("DISM", StringComparison.OrdinalIgnoreCase);
                     bool isSfc = cmd.Display.StartsWith("sfc", StringComparison.OrdinalIgnoreCase);
                     // DISM
-                    if (isDism){
-                        if (cmd.Arguments.IndexOf("/CheckHealth", StringComparison.OrdinalIgnoreCase) >= 0
-                            || cmd.Arguments.IndexOf("/ScanHealth", StringComparison.OrdinalIgnoreCase) >= 0){
-                            if (sadtRepairableRegex.IsMatch(combinedOutput)){
-                                isComponentStoreCorrupt = true;
-                            }
-                        }else if (cmd.Arguments.IndexOf("/RestoreHealth", StringComparison.OrdinalIgnoreCase) >= 0){
-                            if (sadtRestoreFailedRegex.IsMatch(combinedOutput)){
-                                processStatus = false;
-                                processStatusMessage = TruncateSadtOutput(combinedOutput);
-                                break;
-                            }
-                            if (isComponentStoreCorrupt){
-                                repairedCommands.Add(cmd.Display);
-                            }
-                        }
-                    } // SFC
-                    else if (isSfc){
-                        if (sadtSfcFailedRegex.IsMatch(combinedOutput)){
+                    if (isDism)
+                    {
+                        if (sadtNonRepairableRegex.IsMatch(combinedOutput))
+                        {
                             processStatus = false;
                             processStatusMessage = TruncateSadtOutput(combinedOutput);
                             break;
                         }
-                        if (sadtSfcRepairedRegex.IsMatch(combinedOutput)){
+                        if (cmd.Arguments.IndexOf("/CheckHealth", StringComparison.OrdinalIgnoreCase) >= 0
+                            || cmd.Arguments.IndexOf("/ScanHealth", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            if (sadtRepairableRegex.IsMatch(combinedOutput))
+                            {
+                                isComponentStoreCorrupt = true;
+                            }
+                        }
+                        else if (isRestoreCmd)
+                        {
+                            if (sadtRestoreFailedRegex.IsMatch(combinedOutput))
+                            {
+                                processStatus = false;
+                                processStatusMessage = TruncateSadtOutput(combinedOutput);
+                                break;
+                            }
+                            if (isComponentStoreCorrupt)
+                            {
+                                repairedCommands.Add(cmd.Display);
+                            }
+                        }
+                    } // SFC
+                    else if (isSfc)
+                    {
+                        if (sadtSfcFailedRegex.IsMatch(combinedOutput))
+                        {
+                            processStatus = false;
+                            processStatusMessage = TruncateSadtOutput(combinedOutput);
+                            break;
+                        }
+                        if (sadtSfcRepairedRegex.IsMatch(combinedOutput))
+                        {
                             repairedCommands.Add(cmd.Display);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                if (sadtCbsCannotRepairRegex.IsMatch(ReadSadtCbsTail()))
+                                {
+                                    processStatus = false;
+                                    processStatusMessage = TruncateSadtOutput(combinedOutput);
+                                    break;
+                                }
+                            }
+                            catch { }
                         }
                     }
                     if (!processStatus) break;
                 }
                 //
-                if (processStatus){
+                if (processStatus)
+                {
                     string current_time = DateTime.Now.ToString("dd.MM.yyyy - HH:mm:ss");
                     UpdateSafeText(SADT_L4, current_time);
                     try { new TSSettingsModule(ts_sf).TSWriteSettings(ts_settings_container, "SADTime", current_time); }
                     catch (Exception settingEx) { if (GlowMain.debug_status) { TSErrorLog.LogException(settingEx, "SadtEngine() Settings Save"); } }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 processStatus = false;
                 processStatusMessage = TruncateSadtOutput(ex.Message.Trim());
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SadtEngine()"); }
-            }finally{
-                try{ sadtStopwatch?.Stop(); }catch { }
-                try{ if (sadtUiTimer != null) BeginInvoke(new Action(() => { try { sadtUiTimer.Stop(); } catch { } })); }catch { }
+            }
+            finally
+            {
+                try { sadtStopwatch?.Stop(); } catch { }
+                try { if (sadtUiTimer != null) BeginInvoke(new Action(() => { try { sadtUiTimer.Stop(); } catch { } })); } catch { }
                 GlowMain.SFCandDISMprocessStatus = false;
                 //
                 UpdateSafeEnabled(SADT_StartBtn, true);
@@ -204,38 +349,84 @@ namespace Glow.glow_tools{
                 UpdateSafeText(SADT_L2, software_lang.TSReadLangs("DISMandSFCTool", "sadt_description"));
                 //
                 TimeSpan totalTime = TimeSpan.Zero;
-                try{ if (sadtStopwatch != null) totalTime = sadtStopwatch.Elapsed; }catch { }
+                try { if (sadtStopwatch != null) totalTime = sadtStopwatch.Elapsed; } catch { }
                 string timeStr = string.Format("{0:hh\\:mm\\:ss}", totalTime);
                 //
-                if (processStatus){
+                if (processStatus)
+                {
                     string finalMsg = string.Empty;
-                    if (repairedCommands.Count > 0){
+                    if (repairedCommands.Count > 0)
+                    {
                         finalMsg = string.Format(software_lang.TSReadLangs("DISMandSFCTool", "sadt_process_success"), "\n\n", timeStr);
                         finalMsg += "\n\n" + software_lang.TSReadLangs("DISMandSFCTool", "sadt_repair_codes") + "\n\n";
-                        foreach (var cmd in repairedCommands){
+                        foreach (var cmd in repairedCommands)
+                        {
                             finalMsg += "- " + cmd + "\n";
                         }
-                    }else{
+                    }
+                    else
+                    {
                         finalMsg = software_lang.TSReadLangs("DISMandSFCTool", "sadt_no_repair_needed");
                         finalMsg += "\n\n" + string.Format(software_lang.TSReadLangs("DISMandSFCTool", "sadt_total_time"), timeStr);
                     }
                     TS_MessageBoxEngine.TS_MessageBox(this, 1, finalMsg);
-                }else{
+                }
+                else
+                {
                     TS_MessageBoxEngine.TS_MessageBox(this, 3, string.Format(software_lang.TSReadLangs("DISMandSFCTool", "sadt_process_failed"), "\n\n", processStatusMessage, "\n\n", timeStr));
                 }
             }
         }
-        private static string TruncateSadtOutput(string output){
+        private static string TruncateSadtOutput(string output)
+        {
             if (string.IsNullOrEmpty(output)) return string.Empty;
             const int maxLen = 4000;
             string trimmed = output.Trim();
             if (trimmed.Length <= maxLen) return trimmed;
             return "[...]\n" + trimmed.Substring(trimmed.Length - maxLen);
         }
-        private int RunSadtProcess(string fileName, string arguments, Encoding encoding, string displayCmd, string progressFormat, out string combinedOutput){
+        private static Encoding GetSadtOutputEncoding()
+        {
+            try
+            {
+                Encoding consoleEnc = Console.OutputEncoding;
+                if (consoleEnc != null) return consoleEnc;
+            }
+            catch { }
+            try
+            {
+                return Encoding.GetEncoding(System.Globalization.CultureInfo.CurrentCulture.TextInfo.OEMCodePage);
+            }
+            catch { }
+            return Encoding.UTF8;
+        }
+        private static string ReadSadtCbsTail()
+        {
+            try
+            {
+                string cbsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), @"Logs\CBS\CBS.log");
+                if (!File.Exists(cbsPath)) return string.Empty;
+                const int tailBytes = 65536;
+                using (var fs = new FileStream(cbsPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                {
+                    long len = fs.Length;
+                    long start = Math.Max(0, len - tailBytes);
+                    fs.Seek(start, SeekOrigin.Begin);
+                    using (var sr = new StreamReader(fs, Encoding.UTF8, true))
+                    {
+                        return sr.ReadToEnd();
+                    }
+                }
+            }
+            catch { return string.Empty; }
+        }
+        private int RunSadtProcess(string fileName, string arguments, Encoding encoding, string displayCmd, string progressFormat, out string combinedOutput)
+        {
             combinedOutput = string.Empty;
-            using (var processRepair = new Process()){
-                processRepair.StartInfo = new ProcessStartInfo{
+            using (var processRepair = new Process())
+            {
+                processRepair.StartInfo = new ProcessStartInfo
+                {
                     FileName = fileName,
                     Arguments = arguments,
                     UseShellExecute = false,
@@ -247,18 +438,21 @@ namespace Glow.glow_tools{
                 };
                 processRepair.Start();
                 var fullStdOut = new StringBuilder(8192);
-                Task<string> stderrTask = Task.Factory.StartNew(() => {
-                    try{ return processRepair.StandardError.ReadToEnd(); }
-                    catch{ return string.Empty; }
+                Task<string> stderrTask = Task.Factory.StartNew(() =>
+                {
+                    try { return processRepair.StandardError.ReadToEnd(); }
+                    catch { return string.Empty; }
                 });
-                try{
+                try
+                {
                     char[] chunk = new char[2048];
                     var window = new StringBuilder(640);
                     int lastPercent = -1;
                     long lastUiTicks = 0;
                     int readCount;
                     StreamReader reader = processRepair.StandardOutput;
-                    while ((readCount = reader.Read(chunk, 0, chunk.Length)) > 0){
+                    while ((readCount = reader.Read(chunk, 0, chunk.Length)) > 0)
+                    {
                         fullStdOut.Append(chunk, 0, readCount);
                         window.Append(chunk, 0, readCount);
                         if (window.Length > 600) window.Remove(0, window.Length - 600);
@@ -275,55 +469,86 @@ namespace Glow.glow_tools{
                         if (pct == lastPercent) continue;
                         lastPercent = pct;
                         lastUiTicks = now;
-                        try{ UpdateSafeText(SADT_L2, string.Format(progressFormat, displayCmd, "\n\n", "\n", last.Groups[1].Value + "%")); }
+                        try { UpdateSafeText(SADT_L2, string.Format(progressFormat, displayCmd, "\n\n", "\n", last.Groups[1].Value + "%")); }
                         catch { }
                     }
-                }catch (Exception readEx){
-                    try{ if (!processRepair.HasExited){ processRepair.Kill(); processRepair.WaitForExit(5000); } }catch { }
+                }
+                catch (Exception readEx)
+                {
+                    try { if (!processRepair.HasExited) { processRepair.Kill(); processRepair.WaitForExit(5000); } } catch { }
                     throw new Exception("Process read failed: " + displayCmd, readEx);
                 }
-                try{ processRepair.WaitForExit(); }catch { }
+                try
+                {
+                    if (!processRepair.WaitForExit(SadtProcessTimeoutMs))
+                    {
+                        try { if (!processRepair.HasExited) processRepair.Kill(); } catch { }
+                        try { processRepair.WaitForExit(5000); } catch { }
+                    }
+                }
+                catch { }
                 string stderr = string.Empty;
-                try{
-                    if (stderrTask.Wait(15000)){
+                try
+                {
+                    if (stderrTask.Wait(15000))
+                    {
                         stderr = stderrTask.Result ?? string.Empty;
                     }
-                }catch { stderr = string.Empty; }
+                }
+                catch { stderr = string.Empty; }
                 combinedOutput = (fullStdOut.ToString() + "\n" + stderr).Trim();
-                try{ return processRepair.HasExited ? processRepair.ExitCode : -1; }
-                catch{ return -1; }
+                try { return processRepair.HasExited ? processRepair.ExitCode : -1; }
+                catch { return -1; }
             }
         }
         // SAFE TEXT UI THREAD
         // ======================================================================================================
-        private void UpdateSafeText(Form renderForm, string renderMessage){
-            if (renderForm.InvokeRequired){
+        private void UpdateSafeText(Form renderForm, string renderMessage)
+        {
+            if (renderForm.InvokeRequired)
+            {
                 renderForm.BeginInvoke(new Action(() => renderForm.Text = renderMessage));
-            }else{
+            }
+            else
+            {
                 renderForm.Text = renderMessage;
             }
         }
-        private void UpdateSafeText(Label renderLabel, string renderMessage){
-            if (renderLabel.InvokeRequired){
+        private void UpdateSafeText(Label renderLabel, string renderMessage)
+        {
+            if (renderLabel.InvokeRequired)
+            {
                 renderLabel.BeginInvoke(new Action(() => renderLabel.Text = renderMessage));
-            }else{
+            }
+            else
+            {
                 renderLabel.Text = renderMessage;
             }
         }
-        private void UpdateSafeEnabled(Button renderBtn, bool renderMode){
-            if (renderBtn.InvokeRequired){
+        private void UpdateSafeEnabled(Button renderBtn, bool renderMode)
+        {
+            if (renderBtn.InvokeRequired)
+            {
                 renderBtn.BeginInvoke(new Action(() => renderBtn.Enabled = renderMode));
-            }else{
+            }
+            else
+            {
                 renderBtn.Enabled = renderMode;
             }
         }
         // CLOSE CHECK STATUS
         // ======================================================================================================
-        private void GlowSFCandDISMAutoTool_FormClosing(object sender, FormClosingEventArgs e){
-            if (GlowMain.SFCandDISMprocessStatus){
+        private void GlowSFCandDISMAutoTool_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (GlowMain.SFCandDISMprocessStatus)
+            {
                 e.Cancel = true;
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 TS_MessageBoxEngine.TS_MessageBox(this, 2, software_lang.TSReadLangs("GToolsMessage", "gtm_dism_and_sfc_prs_msg"));
+            }
+            else
+            {
+                try { if (sadtUiTimer != null) { sadtUiTimer.Stop(); sadtUiTimer.Dispose(); sadtUiTimer = null; } } catch { }
             }
         }
     }

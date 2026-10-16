@@ -11,23 +11,46 @@ using System.Windows.Forms;
 //
 using static Glow.TSModules;
 
-namespace Glow.glow_tools{
-    public partial class GlowShowWiFiPasswordTool : Form{
-        public GlowShowWiFiPasswordTool(){
+namespace Glow.glow_tools
+{
+    public partial class GlowShowWiFiPasswordTool : Form
+    {
+        public GlowShowWiFiPasswordTool()
+        {
             InitializeComponent();
             SWP_DGV.Columns.Add("col_ssid", "Network Name");
             SWP_DGV.Columns.Add("col_pass", "Network Password");
-            SWP_DGV.Columns[0].Width = (int)(260 * this.DeviceDpi / 96f);
-            SWP_DGV.RowTemplate.Height = (int)(32 * this.DeviceDpi / 96f);
-            foreach (DataGridViewColumn columnPadding in SWP_DGV.Columns){
-                int scaledPadding = (int)(3 * this.DeviceDpi / 96f);
-                columnPadding.DefaultCellStyle.Padding = new Padding(scaledPadding, 0, 0, 0);
+            ApplyDpiScaling(this.DeviceDpi);
+        }
+        // UI DPI (shared standard: TSDpiHelper)
+        // ======================================================================================================
+        private void ApplyDpiScaling(int dpi)
+        {
+            if (IsDisposed || Disposing) return;
+            if (dpi <= 0) dpi = TSDpiHelper.BaseDpi;
+            TSDpiHelper.ScaleDataGridView(SWP_DGV, new[] { 260 }, 32, dpiOverride: dpi);
+        }
+        protected override void OnDpiChanged(DpiChangedEventArgs e)
+        {
+            base.OnDpiChanged(e);
+            try
+            {
+                ApplyDpiScaling(e.DeviceDpiNew);
+                GTool_SWP_Preloader();
+                this.PerformLayout();
+                this.Invalidate(true);
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "OnDpiChanged()"); }
             }
         }
         // PRE-LOAD
         // ======================================================================================================
-        public void GTool_SWP_Preloader(){
-            try{
+        public void GTool_SWP_Preloader()
+        {
+            try
+            {
                 TSThemeModeHelper.InitializeThemeForForm(this);
                 //
                 BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor");
@@ -56,76 +79,105 @@ namespace Glow.glow_tools{
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 Text = string.Format(software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_title"), Application.ProductName);
                 //
-                if (SWP_DGV.Columns.Count > 0){
+                if (SWP_DGV.Columns.Count > 0)
+                {
                     SWP_DGV.Columns[0].HeaderText = software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_profile_name");
                     SWP_DGV.Columns[1].HeaderText = software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_profile_password");
                 }
                 //
                 SWPT_ExportBtn.Text = " " + software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_export_btn");
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GTool_SWP_Preloader()"); }
             }
         }
         // LOAD SWPT
         // ======================================================================================================
-        private async void GlowShowWiFiPasswordTool_Load(object sender, EventArgs e){
-            try{
+        private async void GlowShowWiFiPasswordTool_Load(object sender, EventArgs e)
+        {
+            try
+            {
                 GTool_SWP_Preloader();
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 Text = string.Format(software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_title"), Application.ProductName) + " - " + software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_load");
-                await Task.Run(() => {
+                await Task.Run(() =>
+                {
                     string[] wifiProfiles = Ts_ExtractWiFiProfileNames(Ts_GetWiFiPassword("wlan show profile"));
-                    if (wifiProfiles.Length == 0){
+                    if (wifiProfiles.Length == 0)
+                    {
                         if (IsDisposed || !IsHandleCreated) return;
-                        Invoke(new Action(() => {
+                        Invoke(new Action(() =>
+                        {
                             TS_MessageBoxEngine.TS_MessageBox(this, 2, string.Format(software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_no_profile"), "\n", software_lang.TSReadLangs("HeaderTools", "ht_show_wifi_password_tool")));
                             Close();
                         }));
                         return;
                     }
                     var rows = new List<KeyValuePair<string, string>>(wifiProfiles.Length);
-                    foreach (string profile in wifiProfiles){
+                    foreach (string profile in wifiProfiles)
+                    {
                         if (IsDisposed || !IsHandleCreated) return;
                         string clean = profile.Trim();
                         rows.Add(new KeyValuePair<string, string>(clean, GetWiFiPassword(clean)));
                     }
                     if (IsDisposed || !IsHandleCreated) return;
-                    Invoke(new Action(() => {
+                    Invoke(new Action(() =>
+                    {
                         if (IsDisposed || !IsHandleCreated) return;
                         Text = string.Format(software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_title"), Application.ProductName);
                         SWPT_ExportBtn.Enabled = true;
-                        foreach (var row in rows){
+                        foreach (var row in rows)
+                        {
                             SWP_DGV.Rows.Add(row.Key, row.Value);
                         }
                         SWP_DGV.ClearSelection();
                     }));
                 });
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GlowShowWiFiPasswordTool_Load()"); }
             }
         }
         // GET WI-FI PASSWORD
         // ======================================================================================================
-        static string GetWiFiPassword(string networkName){
+        static string GetWiFiPassword(string networkName)
+        {
             TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
-            try{
+            try
+            {
                 string wifiDetails = Ts_GetWiFiPassword("wlan show profile name=\"" + networkName + "\" key=clear");
+                string pwd = null;
                 Match m = Regex.Match(wifiDetails, @"(?im)^\s*Key Content\s*:\s*(.+?)\s*$");
-                if (!m.Success)
+                if (m.Success)
+                {
+                    pwd = m.Groups[1].Value;
+                }
+                else
+                {
+                    Match f = Regex.Match(wifiDetails, @"(?im)^\s*[^:\r\n]*?(key|schl[üu]ssel|cl[ée]|clave|chiave|sleutel|klucz|chave|anahtar|ключ|密钥|密鑰|キー|키|कुंजी|كلمة|مفتاح)\s*[^:\r\n]*:\s*(.+?)\s*$");
+                    if (f.Success) pwd = f.Groups[2].Value;
+                }
+                if (string.IsNullOrWhiteSpace(pwd))
                     return software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_profile_no_password");
-                return m.Groups[1].Value.Trim();
-            }catch (Exception ex){
+                return pwd.Trim();
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GetWiFiPassword()"); }
                 return software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_profile_no_read");
             }
         }
         // EXECUTE NETSH DIRECTLY (NO CMD LAYER, OEM ENCODING FOR NON-ASCII OUTPUT)
         // ======================================================================================================
-        static string Ts_GetWiFiPassword(string netshArgs){
+        static string Ts_GetWiFiPassword(string netshArgs)
+        {
             Encoding oemEncoding;
-            try{ oemEncoding = Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage); }
-            catch{ oemEncoding = Encoding.Default; }
-            ProcessStartInfo wifi_psi = new ProcessStartInfo{
+            try { oemEncoding = Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.OEMCodePage); }
+            catch { oemEncoding = Encoding.Default; }
+            ProcessStartInfo wifi_psi = new ProcessStartInfo
+            {
                 FileName = "netsh",
                 Arguments = netshArgs,
                 RedirectStandardOutput = true,
@@ -135,35 +187,52 @@ namespace Glow.glow_tools{
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
-            using (Process process_result = Process.Start(wifi_psi)){
+            using (Process process_result = Process.Start(wifi_psi))
+            {
                 if (process_result == null) return string.Empty;
-                Task<string> errTask = Task.Run(() => {
-                    try{ return process_result.StandardError.ReadToEnd(); }
-                    catch{ return string.Empty; }
+                Task<string> errTask = Task.Run(() =>
+                {
+                    try { return process_result.StandardError.ReadToEnd(); }
+                    catch { return string.Empty; }
                 });
                 string wifi_output_result = process_result.StandardOutput.ReadToEnd();
                 process_result.WaitForExit();
-                try{ errTask.Wait(5000); }catch { }
+                try { errTask.Wait(5000); } catch { }
                 return wifi_output_result ?? string.Empty;
             }
         }
         // GET ONLY THE REQUIRED SITE WITH CMD
         // ======================================================================================================
-        static string[] Ts_ExtractWiFiProfileNames(string get_wifi_profiles){
+        static string[] Ts_ExtractWiFiProfileNames(string get_wifi_profiles)
+        {
             if (string.IsNullOrEmpty(get_wifi_profiles)) return new string[0];
             int startIndex = get_wifi_profiles.IndexOf("User profiles", StringComparison.OrdinalIgnoreCase);
             string profileSection = startIndex >= 0 ? get_wifi_profiles.Substring(startIndex) : get_wifi_profiles;
             MatchCollection matches = Regex.Matches(profileSection, @"All User Profile\s*:\s*(.*)", RegexOptions.IgnoreCase);
-            string[] profileNames = new string[matches.Count];
-            for (int i = 0; i < matches.Count; i++){
-                profileNames[i] = matches[i].Groups[1].Value.Trim();
+            var profileNames = new List<string>(matches.Count);
+            var profileSeen = new HashSet<string>();
+            for (int i = 0; i < matches.Count; i++)
+            {
+                string name = matches[i].Groups[1].Value.Trim();
+                if (!string.IsNullOrWhiteSpace(name) && profileSeen.Add(name))
+                    profileNames.Add(name);
             }
-            return profileNames;
+            if (profileNames.Count > 0) return profileNames.ToArray();
+            MatchCollection fb = Regex.Matches(get_wifi_profiles, @"(?im)^\s*[^:\r\n]*?(profil|profile|perfil|profiel|profilo|профиль|配置文件|プロファイル|프로필|प्रोफ़ाइल|الملف)\w*\s*:\s*(.+?)\s*$");
+            foreach (Match m in fb)
+            {
+                string name = m.Groups[2].Value.Trim();
+                if (!string.IsNullOrWhiteSpace(name) && profileSeen.Add(name))
+                    profileNames.Add(name);
+            }
+            return profileNames.ToArray();
         }
         // COPY SELECTED WI-FI PASSWORD
         // ======================================================================================================
-        private void SWP_DGV_CellDoubleClick(object sender, DataGridViewCellEventArgs e){
-            try{
+        private void SWP_DGV_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 if (e.RowIndex < 0)
                     return;
@@ -179,16 +248,20 @@ namespace Glow.glow_tools{
                 Clipboard.SetText(password);
                 TS_MessageBoxEngine.TS_MessageBox(this, 1, string.Format(software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_copy_txt"), profileName));
                 SWP_DGV.ClearSelection();
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SWP_DGV_CellDoubleClick()"); }
             }
         }
         // EXPORT WI-FI'S PASSWORD
         // ======================================================================================================
         readonly List<string> PrintWiFiList = new List<string>();
-        private void SWPT_ExportBtn_Click(object sender, EventArgs e){
+        private void SWPT_ExportBtn_Click(object sender, EventArgs e)
+        {
             TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
-            try{
+            try
+            {
                 string profile_name = software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_profile_name") + ":";
                 string profile_password = software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_profile_password") + ":";
                 //
@@ -196,19 +269,23 @@ namespace Glow.glow_tools{
                 PrintWiFiList.Add(string.Format(software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_profile_title"), Application.ProductName));
                 PrintWiFiList.Add(Environment.NewLine + new string('-', 100) + Environment.NewLine);
                 //
-                for (int i = 0; i <= SWP_DGV.Rows.Count - 1; i++){
+                for (int i = 0; i <= SWP_DGV.Rows.Count - 1; i++)
+                {
                     int lineLength = (i == SWP_DGV.Rows.Count - 1) ? 100 : 25;
                     PrintWiFiList.Add(profile_name + " " + SWP_DGV.Rows[i].Cells[0].Value.ToString() + "\n" + profile_password + " " + SWP_DGV.Rows[i].Cells[1].Value.ToString() + Environment.NewLine + Environment.NewLine + new string('-', lineLength) + Environment.NewLine);
                 }
                 //
-                using (SaveFileDialog saveDlg = new SaveFileDialog{
+                using (SaveFileDialog saveDlg = new SaveFileDialog
+                {
                     InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
                     Title = Application.ProductName + " - " + software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_save_directory"),
                     DefaultExt = "txt",
                     FileName = Application.ProductName + " - " + string.Format(software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_save_name"), software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_export_name")),
                     Filter = software_lang.TSReadLangs("ShowWiFiPasswordTool", "swpt_save_txt") + " (*.txt)|*.txt"
-                }){
-                    if (saveDlg.ShowDialog() == DialogResult.OK){
+                })
+                {
+                    if (saveDlg.ShowDialog() == DialogResult.OK)
+                    {
                         string content = string.Join(Environment.NewLine, PrintWiFiList);
                         content = content.TrimEnd(Environment.NewLine.ToCharArray());
                         File.WriteAllText(saveDlg.FileName, content);
@@ -217,7 +294,9 @@ namespace Glow.glow_tools{
                             Process.Start(saveDlg.FileName);
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SWPT_ExportBtn_Click()"); }
             }
         }

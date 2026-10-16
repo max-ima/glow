@@ -21,7 +21,6 @@
     <PlatformTarget>x64</PlatformTarget>
     <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
@@ -32,7 +31,6 @@
     <PlatformTarget>x64</PlatformTarget>
     <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM64'">
@@ -43,7 +41,6 @@
     <PlatformTarget>ARM64</PlatformTarget>
     <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM64'">
@@ -54,7 +51,6 @@
     <PlatformTarget>ARM64</PlatformTarget>
     <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
@@ -68,9 +64,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System">
-      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8.1\System.dll</HintPath>
-    </Reference>
+    <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
@@ -148,6 +142,12 @@
     <Compile Include="glow_tools\GlowNetworkFixTool.Designer.cs">
       <DependentUpon>GlowNetworkFixTool.cs</DependentUpon>
     </Compile>
+    <Compile Include="glow_tools\GlowPortScannerTool.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="glow_tools\GlowPortScannerTool.Designer.cs">
+      <DependentUpon>GlowPortScannerTool.cs</DependentUpon>
+    </Compile>
     <Compile Include="glow_tools\GlowSFCandDISMAutoTool.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -180,9 +180,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TSCustomControls.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="TSCustomControls.cs" />
     <Compile Include="TSModules.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -231,7 +229,6 @@
     <None Include="glow_images\glow_ui\theme_dark\ct_clear_dark.png" />
     <None Include="glow_images\glow_ui\theme_dark\ct_github_dark.png" />
     <None Include="glow_images\glow_ui\theme_light\ct_github_light.png" />
-    <None Include="glow_images\glow_ui\ts_material\ts_close.png" />
     <None Include="glow_images\glow_ui\theme_light\tm_update_light.png" />
     <None Include="glow_images\glow_ui\theme_light\tm_tools_light.png" />
     <None Include="glow_images\glow_ui\theme_light\tm_theme_light.png" />

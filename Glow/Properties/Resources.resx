@@ -394,9 +394,6 @@
   <data name="tm_update_light" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\glow_images\glow_ui\theme_light\tm_update_light.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="ts_close" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\glow_images\glow_ui\ts_material\ts_close.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
   <data name="GlowLogo" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\GlowLogo.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -522,5 +519,11 @@
   </data>
   <data name="ct_success_light" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\glow_images\glow_ui\theme_light\ct_success_light.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="cx_port_scanner_light" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\glow_images\glow_ui\theme_light\cx_port_scanner_light.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="cx_port_scanner_dark" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\glow_images\glow_ui\theme_dark\cx_port_scanner_dark.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

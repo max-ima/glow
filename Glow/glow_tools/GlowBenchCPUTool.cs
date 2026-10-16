@@ -1,28 +1,31 @@
 ﻿using System;
-using System.Linq;
-using System.Drawing;
-using System.Management;
 using System.Diagnostics;
+using System.Drawing;
+using System.Linq;
+using System.Management;
 using System.Threading;
-using System.Windows.Forms;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 //
 using static Glow.TSModules;
 
-namespace Glow.glow_tools{
-    public partial class GlowBenchCPUTool : Form{
+namespace Glow.glow_tools
+{
+    public partial class GlowBenchCPUTool : Form
+    {
         // VARIABLES
         // ======================================================================================================
         private Task[] CPUBench_taskList;
         private Stopwatch CPUBench_stopWatch;
         private bool CPUBench_isRunning = false;
         private double[] CPUBench_collector;
-        private int CPUBench_singleThreadScore = 0, CPUBench_multiThreadScore = 0;
         public GlowBenchCPUTool() { InitializeComponent(); }
         // PRE-LOAD
         // ======================================================================================================
-        public void GTool_BenchCPU_Preloader(){
-            try{
+        public void GTool_BenchCPU_Preloader()
+        {
+            try
+            {
                 TSThemeModeHelper.InitializeThemeForForm(this);
                 //
                 BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor2");
@@ -117,59 +120,95 @@ namespace Glow.glow_tools{
                 //
                 Bench_Start.Text = " " + software_lang.TSReadLangs("BenchCPU", "bc_start_engine");
                 Bench_Stop.Text = " " + software_lang.TSReadLangs("BenchCPU", "bc_stop_engine");
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GTool_BenchCPU_Preloader()"); }
+            }
+        }
+        // UI DPI
+        // ======================================================================================================
+        protected override void OnDpiChanged(DpiChangedEventArgs e)
+        {
+            base.OnDpiChanged(e);
+            try
+            {
+                GTool_BenchCPU_Preloader();
+                this.PerformLayout();
+                this.Invalidate(true);
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "OnDpiChanged()"); }
             }
         }
         // LOAD
         // ======================================================================================================
-        private void GlowBenchCPUTool_Load(object sender, EventArgs e){
-            try{
+        private void GlowBenchCPUTool_Load(object sender, EventArgs e)
+        {
+            try
+            {
                 Cpu_bench_add_mode();
                 GTool_BenchCPU_Preloader();
                 // TEXT CPU NAME
                 Task.Run(() => GetCPUInfo());
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GlowBenchCPUTool_Load()"); }
             }
         }
         // GET CPU INFO
         // ======================================================================================================
-        private void GetCPUInfo(){
-            try{
+        private void GetCPUInfo()
+        {
+            try
+            {
                 var software_lang = new TSGetLangs(GlowMain.lang_path);
                 if (IsDisposed || !IsHandleCreated)
                     return;
-                BeginInvoke(new Action(() => {
+                BeginInvoke(new Action(() =>
+                {
                     Bench_CPUName.Text = software_lang.TSReadLangs("Cpu_Content", "cpu_c_loading");
                     Bench_CPUCores.Text = software_lang.TSReadLangs("Cpu_Content", "cpu_c_loading");
                 }));
-                using (var searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT Name, NumberOfCores, ThreadCount FROM Win32_Processor")){
+                using (var searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT Name, NumberOfCores, ThreadCount FROM Win32_Processor"))
+                {
                     ManagementObjectCollection results = null;
-                    try{
+                    try
+                    {
                         results = searcher.Get();
-                        foreach (ManagementObject queryObj in results.Cast<ManagementObject>()){
-                            using (queryObj){
+                        foreach (ManagementObject queryObj in results.Cast<ManagementObject>())
+                        {
+                            using (queryObj)
+                            {
                                 string cpuName = Convert.ToString(queryObj["Name"]).Trim();
                                 string cpuCores = string.Format(software_lang.TSReadLangs("BenchCPU", "bc_core_thread"), queryObj["NumberOfCores"], queryObj["ThreadCount"]);
                                 if (IsDisposed || !IsHandleCreated)
                                     return;
-                                BeginInvoke(new Action(() => {
+                                BeginInvoke(new Action(() =>
+                                {
                                     Bench_CPUName.Text = cpuName;
                                     Bench_CPUCores.Text = cpuCores;
                                 }));
                             }
                         }
-                    }finally{
-                        try{ results?.Dispose(); }catch { }
+                    }
+                    finally
+                    {
+                        try { results?.Dispose(); } catch { }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GetCPUInfo()"); }
             }
         }
-        private void Cpu_bench_add_mode(){
-            try{
+        private void Cpu_bench_add_mode()
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 //
                 Bench_ModeSelector.Text = software_lang.TSReadLangs("BenchCPU", "bc_level");
@@ -187,64 +226,90 @@ namespace Glow.glow_tools{
                 Bench_TimeSelector_List.Items.Add(software_lang.TSReadLangs("BenchCPU", "bc_time_5"));
                 Bench_TimeSelector_List.Items.Add(software_lang.TSReadLangs("BenchCPU", "bc_time_6"));
                 Bench_TimeSelector_List.SelectedIndex = 0;
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "Cpu_bench_add_mode()"); }
             }
         }
         // CUSTOM TIME MODE
         // ======================================================================================================
-        private void Bench_TimeSelector_List_SelectedIndexChanged(object sender, EventArgs e){
-            if (Bench_TimeSelector_List.SelectedIndex == 5){
+        private void Bench_TimeSelector_List_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (Bench_TimeSelector_List.SelectedIndex == 5)
+            {
                 Bench_TimeCustom.Visible = true;
-            }else{
+            }
+            else
+            {
                 Bench_TimeCustom.Visible = false;
             }
         }
-        private void Bench_TimeCustom_TextBox_KeyPress(object sender, KeyPressEventArgs e){
-            if (!char.IsDigit(e.KeyChar) && !char.IsControl(e.KeyChar)){
+        private void Bench_TimeCustom_TextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!char.IsDigit(e.KeyChar) && !char.IsControl(e.KeyChar))
+            {
                 e.Handled = true;
             }
         }
         // START BTN
         // ======================================================================================================
-        private void Bench_Start_Click(object sender, EventArgs e){
-            try{
+        private void Bench_Start_Click(object sender, EventArgs e)
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
-                if (Bench_ModeSelector_List.SelectedIndex == 3){
+                if (Bench_ModeSelector_List.SelectedIndex == 3)
+                {
                     DialogResult info_warning_hard = TS_MessageBoxEngine.TS_MessageBox(this, 6, string.Format(software_lang.TSReadLangs("BenchCPU", "bc_lethal_warning"), "\n\n", "\n\n", "\n\n"));
                     if (info_warning_hard == DialogResult.Yes)
                     {
                         Bench_start_engine();
                     }
-                }else{
-                    if (Bench_TimeSelector_List.SelectedIndex == 5){
-                        if (!string.IsNullOrEmpty(Bench_TimeCustom.Text.Trim())){
+                }
+                else
+                {
+                    if (Bench_TimeSelector_List.SelectedIndex == 5)
+                    {
+                        if (!string.IsNullOrEmpty(Bench_TimeCustom.Text.Trim()))
+                        {
                             DialogResult info_warning_normal = TS_MessageBoxEngine.TS_MessageBox(this, 6, string.Format(software_lang.TSReadLangs("BenchCPU", "bc_test_start_warning"), "\n\n", "\n\n", "\n\n"));
-                            if (info_warning_normal == DialogResult.Yes){
+                            if (info_warning_normal == DialogResult.Yes)
+                            {
                                 Bench_start_engine();
                             }
-                        }else{
+                        }
+                        else
+                        {
                             TS_MessageBoxEngine.TS_MessageBox(this, 2, software_lang.TSReadLangs("BenchCPU", "bc_time_custom_warning"));
                         }
-                    }else{
+                    }
+                    else
+                    {
                         DialogResult info_warning_normal = TS_MessageBoxEngine.TS_MessageBox(this, 6, string.Format(software_lang.TSReadLangs("BenchCPU", "bc_test_start_warning"), "\n\n", "\n\n", "\n\n"));
-                        if (info_warning_normal == DialogResult.Yes){
+                        if (info_warning_normal == DialogResult.Yes)
+                        {
                             Bench_start_engine();
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "Bench_Start_Click()"); }
             }
         }
         // TIMER
         // ======================================================================================================
-        private async Task BenchTimerAsync(){
+        private async Task BenchTimerAsync()
+        {
             var software_lang = new TSGetLangs(GlowMain.lang_path);
             string titleFormat = string.Format(software_lang.TSReadLangs("BenchCPU", "bc_title"), Application.ProductName);
             string elapsedTimeFormat = software_lang.TSReadLangs("BenchCPU", "bc_elapsed_time");
-            try{
-                while (GlowMain.CPUbenchMode){
+            try
+            {
+                while (GlowMain.CPUbenchMode)
+                {
                     if (CPUBench_stopWatch == null)
                         break;
                     TimeSpan elapsed = CPUBench_stopWatch.Elapsed;
@@ -253,19 +318,24 @@ namespace Glow.glow_tools{
                     int fh_hour = (int)elapsed.TotalHours;
                     if (IsDisposed || !IsHandleCreated)
                         break;
-                    BeginInvoke(new Action(() => {
+                    BeginInvoke(new Action(() =>
+                    {
                         Text = $"{titleFormat} - {elapsedTimeFormat} {fh_hour:D2}:{fh_minute:D2}:{fh_second:D2}";
                     }));
                     await Task.Delay(1000);
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "BenchTimerAsync() - Timer"); }
             }
         }
         // CPU BENCHMARK ENGINE
         // ======================================================================================================
-        private async void Bench_start_engine(){
-            if (!CPUBench_isRunning){
+        private async void Bench_start_engine()
+        {
+            if (!CPUBench_isRunning)
+            {
                 GlowMain.CPUbenchMode = true;
                 CPUBench_isRunning = true;
                 //
@@ -288,26 +358,30 @@ namespace Glow.glow_tools{
                 CPUBench_stopWatch = new Stopwatch();
                 CPUBench_collector = new double[coreCount];
                 // REAL SCORE SAMPLER (measures actual throughput, not a static formula)
-                var updateScoreTask = Task.Run(async () => {
+                var updateScoreTask = Task.Run(async () =>
+                {
                     double prevTotal = 0;
                     bool firstSample = true;
                     DateTime prevTime = DateTime.UtcNow;
-                    while (CPUBench_isRunning && GlowMain.CPUbenchMode){
+                    while (CPUBench_isRunning && GlowMain.CPUbenchMode)
+                    {
                         await Task.Delay(500);
                         if (!CPUBench_isRunning || !GlowMain.CPUbenchMode)
                             break;
                         double total = 0;
-                        try{
+                        try
+                        {
                             double[] snapshot = CPUBench_collector;
                             if (snapshot == null)
                                 continue;
                             for (int k = 0; k < snapshot.Length; k++)
                                 total += snapshot[k];
-                        }catch { continue; }
+                        }
+                        catch { continue; }
                         DateTime now = DateTime.UtcNow;
                         double secs = (now - prevTime).TotalSeconds;
                         prevTime = now;
-                        if (firstSample || secs <= 0){ prevTotal = total; firstSample = false; continue; }
+                        if (firstSample || secs <= 0) { prevTotal = total; firstSample = false; continue; }
                         double delta = total - prevTotal;
                         prevTotal = total;
                         if (delta < 0) delta = 0;
@@ -315,16 +389,17 @@ namespace Glow.glow_tools{
                         double singleOps = coreCount > 0 ? multiOps / coreCount : multiOps;
                         int singleScore = singleOps > int.MaxValue ? int.MaxValue : (int)Math.Round(singleOps);
                         int multiScore = multiOps > int.MaxValue ? int.MaxValue : (int)Math.Round(multiOps);
-                        CPUBench_singleThreadScore = singleScore;
-                        CPUBench_multiThreadScore = multiScore;
                         if (IsDisposed || !IsHandleCreated)
                             break;
-                        try{
-                            BeginInvoke(new Action(() => {
+                        try
+                        {
+                            BeginInvoke(new Action(() =>
+                            {
                                 Bench_Label_RSingleResult.Text = singleScore.ToString("N0");
                                 Bench_Label_RMultiResult.Text = multiScore.ToString("N0");
                             }));
-                        }catch { }
+                        }
+                        catch { }
                     }
                 });
                 //
@@ -339,8 +414,10 @@ namespace Glow.glow_tools{
                     benchDuration = TimeSpan.FromMinutes(30);
                 else if (Bench_TimeSelector_List.SelectedIndex == 4)
                     benchDuration = TimeSpan.FromHours(1);
-                else if (!string.IsNullOrEmpty(Bench_TimeCustom.Text)){
-                    if (double.TryParse(Bench_TimeCustom.Text.Trim(), out double customMinutes) && customMinutes > 0){
+                else if (!string.IsNullOrEmpty(Bench_TimeCustom.Text))
+                {
+                    if (int.TryParse(Bench_TimeCustom.Text.Trim(), out int customMinutes) && customMinutes > 0)
+                    {
                         if (customMinutes > 180) customMinutes = 180;
                         benchDuration = TimeSpan.FromMinutes(customMinutes);
                     }
@@ -350,14 +427,18 @@ namespace Glow.glow_tools{
                 var timerTask = BenchTimerAsync();
                 //
                 CPUBench_stopWatch.Start();
+                long benchTicksDeadline = DateTime.UtcNow.Ticks + benchDuration.Ticks;
                 // ALL CORE WITH TASKS
                 CPUBench_taskList = new Task[coreCount];
-                for (int i = 0; i < coreCount; i++){
+                for (int i = 0; i < coreCount; i++)
+                {
                     int coreIndex = i;
-                    CPUBench_taskList[i] = Task.Run(() => {
+                    CPUBench_taskList[i] = Task.Run(() =>
+                    {
                         // ENGINE MODE
                         Random random = new Random(unchecked(Guid.NewGuid().GetHashCode() ^ (coreIndex * 997) ^ Thread.CurrentThread.ManagedThreadId));
-                        while (CPUBench_isRunning && DateTime.Now < endTime){
+                        while (CPUBench_isRunning && DateTime.UtcNow.Ticks < benchTicksDeadline)
+                        {
                             double number = random.NextDouble();
                             double result = Math.Sqrt(number);
                             CPUBench_collector[coreIndex] += result;
@@ -365,9 +446,12 @@ namespace Glow.glow_tools{
                     });
                 }
                 //
-                try{
+                try
+                {
                     await Task.WhenAll(CPUBench_taskList);
-                }catch (Exception ex){
+                }
+                catch (Exception ex)
+                {
                     if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "CPUBench - Task.WhenAll"); }
                 }
                 //
@@ -376,19 +460,27 @@ namespace Glow.glow_tools{
                 CPUBench_isRunning = false;
                 GlowMain.CPUbenchMode = false;
                 //
-                try{
+                try
+                {
                     await updateScoreTask;
-                }catch (Exception ex){
+                }
+                catch (Exception ex)
+                {
                     if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "CPUBench - updateScoreTask"); }
                 }
-                try{
+                try
+                {
                     await timerTask;
-                }catch (Exception ex){
+                }
+                catch (Exception ex)
+                {
                     if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "CPUBench - timerTask"); }
                 }
                 //
-                if (!IsDisposed && IsHandleCreated && !stoppedEarly){
-                    BeginInvoke(new Action(() => {
+                if (!IsDisposed && IsHandleCreated && !stoppedEarly)
+                {
+                    BeginInvoke(new Action(() =>
+                    {
                         Bench_Start.Enabled = true;
                         Bench_Stop.Enabled = false;
                         Bench_ModeSelector_List.Enabled = true;
@@ -402,13 +494,16 @@ namespace Glow.glow_tools{
         }
         // ENGINE STOP BTN
         // ======================================================================================================
-        private void Bench_Stop_Click(object sender, EventArgs e){
+        private void Bench_Stop_Click(object sender, EventArgs e)
+        {
             Bench_stop_engine();
         }
         // ENGINE STOP MODE
         // ======================================================================================================
-        private async void Bench_stop_engine(){
-            if (CPUBench_isRunning){
+        private async void Bench_stop_engine()
+        {
+            if (CPUBench_isRunning)
+            {
                 GlowMain.CPUbenchMode = false;
                 CPUBench_isRunning = false;
                 //
@@ -418,11 +513,15 @@ namespace Glow.glow_tools{
                 Bench_TimeSelector_List.Enabled = true;
                 Bench_TimeCustom.Enabled = true;
                 //
-                try{
-                    if (CPUBench_taskList != null){
+                try
+                {
+                    if (CPUBench_taskList != null)
+                    {
                         await Task.WhenAll(CPUBench_taskList);
                     }
-                }catch (Exception ex){
+                }
+                catch (Exception ex)
+                {
                     if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "Bench_stop_engine()"); }
                 }
                 //
@@ -436,8 +535,10 @@ namespace Glow.glow_tools{
         }
         // EXIT
         // ======================================================================================================
-        private void GlowBenchCPU_FormClosing(object sender, FormClosingEventArgs e){
-            if (GlowMain.CPUbenchMode || CPUBench_isRunning){
+        private void GlowBenchCPU_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (GlowMain.CPUbenchMode || CPUBench_isRunning)
+            {
                 e.Cancel = true;
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 TS_MessageBoxEngine.TS_MessageBox(this, 2, software_lang.TSReadLangs("GToolsMessage", "gtm_benchmark_cpu_prs_msg"));

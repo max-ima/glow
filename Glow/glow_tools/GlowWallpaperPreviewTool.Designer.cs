@@ -50,7 +50,7 @@
             this.BackPanel.Location = new System.Drawing.Point(0, 0);
             this.BackPanel.Name = "BackPanel";
             this.BackPanel.Padding = new System.Windows.Forms.Padding(10);
-            this.BackPanel.Size = new System.Drawing.Size(489, 496);
+            this.BackPanel.Size = new System.Drawing.Size(489, 511);
             this.BackPanel.TabIndex = 0;
             // 
             // ImageDGV
@@ -104,7 +104,7 @@
             this.ImageDGV.RowHeadersVisible = false;
             this.ImageDGV.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.ImageDGV.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.ImageDGV.Size = new System.Drawing.Size(469, 229);
+            this.ImageDGV.Size = new System.Drawing.Size(469, 244);
             this.ImageDGV.TabIndex = 0;
             this.ImageDGV.SelectionChanged += new System.EventHandler(this.ImageDGV_SelectionChanged);
             // 
@@ -134,7 +134,7 @@
             this.BtnWallpaperLocationBtn.Font = new System.Drawing.Font("Segoe UI Semibold", 10.5F, System.Drawing.FontStyle.Bold);
             this.BtnWallpaperLocationBtn.ForeColor = System.Drawing.Color.White;
             this.BtnWallpaperLocationBtn.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.BtnWallpaperLocationBtn.Location = new System.Drawing.Point(10, 450);
+            this.BtnWallpaperLocationBtn.Location = new System.Drawing.Point(10, 465);
             this.BtnWallpaperLocationBtn.Name = "BtnWallpaperLocationBtn";
             this.BtnWallpaperLocationBtn.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.BtnWallpaperLocationBtn.Size = new System.Drawing.Size(469, 36);
@@ -151,7 +151,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.AutoScroll = true;
-            this.ClientSize = new System.Drawing.Size(489, 496);
+            this.ClientSize = new System.Drawing.Size(489, 511);
             this.Controls.Add(this.BackPanel);
             this.DoubleBuffered = true;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;

@@ -1,51 +1,58 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
-using System.Diagnostics;
-using System.Windows.Forms;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 //
 using static Glow.TSModules;
 
-namespace Glow{
-    public partial class GlowAbout : Form{
-        public GlowAbout(){
+namespace Glow
+{
+    public partial class GlowAbout : Form
+    {
+        public GlowAbout()
+        {
             InitializeComponent();
             //
-            typeof(DataGridView).InvokeMember("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty, null, AboutTable, new object[]{ true });
+            typeof(DataGridView).InvokeMember("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty, null, AboutTable, new object[] { true });
             //
-            PanelHeader.Parent = ImageAbout;
-            CloseAboutBtn.Parent = PanelHeader;
-            AboutTable.RowTemplate.Height = (int)(28 * this.DeviceDpi / 96f);
             AboutTable.Columns.Add("LangName", "Language");
             AboutTable.Columns.Add("LangTranslator", "Translator");
-            AboutTable.Columns[0].Width = (int)(110 * this.DeviceDpi / 96f);
             AboutTable.AllowUserToResizeColumns = false;
-            foreach (DataGridViewColumn columnPadding in AboutTable.Columns){
-                int scaledPadding = (int)(3 * this.DeviceDpi / 96f);
-                columnPadding.DefaultCellStyle.Padding = new Padding(scaledPadding, 0, 0, 0);
-            }
             foreach (DataGridViewColumn A_Column in AboutTable.Columns) { A_Column.SortMode = DataGridViewColumnSortMode.NotSortable; }
-            //
-            TSImageRenderer(CloseAboutBtn, Properties.Resources.ts_close, 20);
+            ApplyDpiScaling(this.DeviceDpi);
         }
-        // DRAGGING VARIABLES
+        // UI DPI (shared standard: TSDpiHelper)
         // ======================================================================================================
-        private bool formIsDragging = false;
-        private Point formDraggingStartPoint = new Point(0, 0);
-        // ENABLE EDGE WHEN BORDER IS CLOSED FOR WINDOWS 11
-        // ======================================================================================================
-        protected override void OnHandleCreated(EventArgs e){
-            base.OnHandleCreated(e);
-            if (Program.Windows_mode == 1){
-                int preference = (int)DWM_WINDOW_CORNER_PREFERENCE.Round;
-                DwmSetWindowAttribute(this.Handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref preference, sizeof(int));
+        private void ApplyDpiScaling(int dpi)
+        {
+            if (IsDisposed || Disposing) return;
+            if (dpi <= 0) dpi = TSDpiHelper.BaseDpi;
+            TSDpiHelper.ScaleDataGridView(AboutTable, new[] { 110 }, 28, dpiOverride: dpi);
+        }
+        protected override void OnDpiChanged(DpiChangedEventArgs e)
+        {
+            base.OnDpiChanged(e);
+            try
+            {
+                ApplyDpiScaling(e.DeviceDpiNew);
+                About_Preloader();
+                this.PerformLayout();
+                this.Invalidate(true);
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "OnDpiChanged()"); }
             }
         }
         // ABOUT LOAD
         // ======================================================================================================
-        private async void GlowAbout_Load(object sender, EventArgs e){
-            try{
+        private async void GlowAbout_Load(object sender, EventArgs e)
+        {
+            try
+            {
+                ApplyDpiScaling(this.DeviceDpi);
                 LabelDeveloper.Text = Application.CompanyName;
                 LabelSoftware.Text = Application.ProductName;
                 LabelVersion.Text = TS_VersionEngine.TS_SoftwareVersion(1);
@@ -54,25 +61,50 @@ namespace Glow{
                 About_Preloader();
                 //
                 await Task.Run(() => LoadLanguageConverterName());
-            }catch (Exception ex){
-                if (GlowMain.debug_status){ TSErrorLog.LogException(ex, "GlowAbout_Load()"); }
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GlowAbout_Load()"); }
             }
         }
-        private void LoadLanguageConverterName(){
-            foreach (var available_lang_file in AvailableLanguages){
-                TSSettingsModule software_read_settings = new TSSettingsModule(available_lang_file);
-                string[] get_name = software_read_settings.TSReadSettings("Main", "lang_name").Split('/');
-                string get_lang_translator = software_read_settings.TSReadSettings("Main", "translator");
-                AboutTable.BeginInvoke((Action)(() =>{
-                    AboutTable.Rows.Add(get_name[0].Trim(), get_lang_translator.Trim());
-                }));
+        private void LoadLanguageConverterName()
+        {
+            foreach (var available_lang_file in AvailableLanguages)
+            {
+                try
+                {
+                    if (IsDisposed || !IsHandleCreated) return;
+                    TSSettingsModule software_read_settings = new TSSettingsModule(available_lang_file);
+                    string raw_name = software_read_settings.TSReadSettings("Main", "lang_name") ?? string.Empty;
+                    string[] get_name = raw_name.Split('/');
+                    string display_name = get_name.Length > 0 && !string.IsNullOrWhiteSpace(get_name[0]) ? get_name[0].Trim() : System.IO.Path.GetFileNameWithoutExtension(available_lang_file);
+                    string get_lang_translator = (software_read_settings.TSReadSettings("Main", "translator") ?? string.Empty).Trim();
+                    if (string.IsNullOrEmpty(get_lang_translator)) get_lang_translator = "-";
+                    AboutTable.BeginInvoke((Action)(() =>
+                    {
+                        try
+                        {
+                            if (IsDisposed || !IsHandleCreated) return;
+                            AboutTable.Rows.Add(display_name, get_lang_translator);
+                        }
+                        catch { }
+                    }));
+                }
+                catch { }
             }
-            AboutTable.BeginInvoke((Action)(() => AboutTable.ClearSelection()));
+            try
+            {
+                if (!IsDisposed && IsHandleCreated)
+                    AboutTable.BeginInvoke((Action)(() => { try { AboutTable.ClearSelection(); } catch { } }));
+            }
+            catch { }
         }
         // DYNAMIC THEME VOID
         // ======================================================================================================
-        public void About_Preloader(){
-            try{
+        public void About_Preloader()
+        {
+            try
+            {
                 TSThemeModeHelper.InitializeThemeForForm(this);
                 //
                 BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor2");
@@ -83,8 +115,10 @@ namespace Glow{
                 LabelVersion.ForeColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_LabelColor2");
                 LabelCopyright.ForeColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_LabelColor2");
                 //
-                foreach (Control ui_buttons in PanelTxt.Controls){
-                    if (ui_buttons is Button about_button){
+                foreach (Control ui_buttons in PanelTxt.Controls)
+                {
+                    if (ui_buttons is Button about_button)
+                    {
                         about_button.ForeColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor2");
                         about_button.BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_AccentColor");
                         about_button.FlatAppearance.BorderColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_AccentColor");
@@ -108,10 +142,6 @@ namespace Glow{
                 AboutTable.DefaultCellStyle.SelectionBackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_AccentColor");
                 AboutTable.DefaultCellStyle.SelectionForeColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor2");
                 //
-                CloseAboutBtn.BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_CloseBG");
-                CloseAboutBtn.FlatAppearance.BorderColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_CloseBG");
-                CloseAboutBtn.FlatAppearance.MouseOverBackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_CloseBGHover");
-                CloseAboutBtn.FlatAppearance.MouseDownBackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_CloseBGHover");
                 // ======================================================================================================
                 // TEXTS
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
@@ -122,57 +152,53 @@ namespace Glow{
                 //
                 AboutTable.Columns[0].HeaderText = software_lang.TSReadLangs("SoftwareAbout", "sa_lang_name");
                 AboutTable.Columns[1].HeaderText = software_lang.TSReadLangs("SoftwareAbout", "sa_lang_translator");
-            }catch (Exception ex){
-                if (GlowMain.debug_status){ TSErrorLog.LogException(ex, "About_Preloader()"); }
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "About_Preloader()"); }
             }
         }
         // DGV CLEAR SELECTION
         // ======================================================================================================
-        private void AboutTable_SelectionChanged(object sender, EventArgs e){ AboutTable.ClearSelection(); }
+        private void AboutTable_SelectionChanged(object sender, EventArgs e) { AboutTable.ClearSelection(); }
         // WEBSITE LINK
         // ======================================================================================================
-        private void About_WebsiteBtn_Click(object sender, EventArgs e){
-            try{
-                Process.Start(new ProcessStartInfo(TS_LinkSystem.website_link){ UseShellExecute = true });
-            }catch (Exception ex){
-                if (GlowMain.debug_status){ TSErrorLog.LogException(ex, "About_WebsiteBtn_Click()"); }
+        private void About_WebsiteBtn_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(TS_LinkSystem.website_link) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "About_WebsiteBtn_Click()"); }
             }
         }
         // GITHUB LINK
         // ======================================================================================================
-        private void About_GitHubBtn_Click(object sender, EventArgs e){
-            try{
-                Process.Start(new ProcessStartInfo(TS_LinkSystem.github_link){ UseShellExecute = true });
-            }catch (Exception ex){
-                if (GlowMain.debug_status){ TSErrorLog.LogException(ex, "About_GitHubBtn_Click()"); }
+        private void About_GitHubBtn_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(TS_LinkSystem.github_link) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "About_GitHubBtn_Click()"); }
             }
         }
         // DONATE LINK
         // ======================================================================================================
-        private void About_DonateBtn_Click(object sender, EventArgs e){
-            try{
+        private void About_DonateBtn_Click(object sender, EventArgs e)
+        {
+            try
+            {
                 Process.Start(new ProcessStartInfo(TS_LinkSystem.ts_donate) { UseShellExecute = true });
-            }catch (Exception ex){
-                if (GlowMain.debug_status){ TSErrorLog.LogException(ex, "About_DonateBtn_Click()"); }
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "About_DonateBtn_Click()"); }
             }
         }
-        // FORM DRAGGING SYSTEM
-        // ======================================================================================================
-        private void PanelHeader_MouseDown(object sender, MouseEventArgs e){
-            if (e.Button == MouseButtons.Left){
-                formIsDragging = true;
-                formDraggingStartPoint = new Point(e.X, e.Y);
-            }
-        }
-        private void PanelHeader_MouseMove(object sender, MouseEventArgs e){
-            if (formIsDragging){
-                Point form_location = PointToScreen(e.Location);
-                this.Location = new Point(form_location.X - formDraggingStartPoint.X, form_location.Y - formDraggingStartPoint.Y);
-            }
-        }
-        private void PanelHeader_MouseUp(object sender, MouseEventArgs e){ formIsDragging = false; }
-        // CLOSE ABOUT
-        // ======================================================================================================
-        private void CloseAboutBtn_Click(object sender, EventArgs e){ Close(); }
     }
 }

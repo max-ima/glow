@@ -15,17 +15,21 @@ using System.Windows.Forms;
 // TS Modules
 using static Glow.TSModules;
 
-namespace Glow.glow_tools{
-    public partial class GlowSystemIDAnalysisTool : Form{
+namespace Glow.glow_tools
+{
+    public partial class GlowSystemIDAnalysisTool : Form
+    {
         private readonly ConcurrentDictionary<string, ConcurrentBag<string>> hwBag = new ConcurrentDictionary<string, ConcurrentBag<string>>();
         // CONSTRUCTION
         // ======================================================================================================
-        public GlowSystemIDAnalysisTool(){
+        public GlowSystemIDAnalysisTool()
+        {
             InitializeComponent();
             //
             hwBag.TryAdd("CPU", new ConcurrentBag<string>());
             hwBag.TryAdd("MOTHERBOARD", new ConcurrentBag<string>());
             hwBag.TryAdd("BIOS", new ConcurrentBag<string>());
+            hwBag.TryAdd("TPM", new ConcurrentBag<string>());
             hwBag.TryAdd("MEMORY", new ConcurrentBag<string>());
             hwBag.TryAdd("GPU", new ConcurrentBag<string>());
             hwBag.TryAdd("MONITOR", new ConcurrentBag<string>());
@@ -34,24 +38,44 @@ namespace Glow.glow_tools{
             //
             typeof(DataGridView).InvokeMember("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty, null, DGV_MainTable, new object[] { true });
             //
-            DGV_MainTable.RowTemplate.Height = (int)(32 * this.DeviceDpi / 96f);
             DGV_MainTable.Columns.Add("HardwareName", "HName");
             DGV_MainTable.Columns.Add("HardwareResult", "HResult");
-            DGV_MainTable.Columns[0].Width = (int)(325 * this.DeviceDpi / 96f);
             DGV_MainTable.AllowUserToResizeColumns = false;
-            foreach (DataGridViewColumn columnPadding in DGV_MainTable.Columns){
-                int scaledPadding = (int)(3 * this.DeviceDpi / 96f);
-                columnPadding.DefaultCellStyle.Padding = new Padding(scaledPadding, 0, 0, 0);
-            }
             foreach (DataGridViewColumn A_Column in DGV_MainTable.Columns) { A_Column.SortMode = DataGridViewColumnSortMode.NotSortable; }
+            ApplyDpiScaling(this.DeviceDpi);
+        }
+        // UI DPI (shared standard: TSDpiHelper)
+        // ======================================================================================================
+        private void ApplyDpiScaling(int dpi)
+        {
+            if (IsDisposed || Disposing) return;
+            if (dpi <= 0) dpi = TSDpiHelper.BaseDpi;
+            TSDpiHelper.ScaleDataGridView(DGV_MainTable, new[] { 325 }, 32, dpiOverride: dpi);
+        }
+        protected override void OnDpiChanged(DpiChangedEventArgs e)
+        {
+            base.OnDpiChanged(e);
+            try
+            {
+                ApplyDpiScaling(e.DeviceDpiNew);
+                GTool_SystemIA_Preloader();
+                this.PerformLayout();
+                this.Invalidate(true);
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "OnDpiChanged()"); }
+            }
         }
         // BYPASS TABLE CLICK
         // ======================================================================================================
         private void DGV_MainTable_SelectionChanged(object sender, EventArgs e) => DGV_MainTable.ClearSelection();
         // PRE-LOAD
         // ======================================================================================================
-        public void GTool_SystemIA_Preloader(){
-            try{
+        public void GTool_SystemIA_Preloader()
+        {
+            try
+            {
                 TSThemeModeHelper.InitializeThemeForForm(this);
                 //
                 BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor");
@@ -70,8 +94,10 @@ namespace Glow.glow_tools{
                 DGV_MainTable.DefaultCellStyle.SelectionBackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_AccentColor");
                 DGV_MainTable.DefaultCellStyle.SelectionForeColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor2");
                 //
-                foreach (Control ui_buttons in this.Controls){
-                    if (ui_buttons is Button ui_button){
+                foreach (Control ui_buttons in this.Controls)
+                {
+                    if (ui_buttons is Button ui_button)
+                    {
                         ui_button.ForeColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor2");
                         ui_button.BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_AccentColor");
                         ui_button.FlatAppearance.BorderColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_AccentColor");
@@ -93,14 +119,19 @@ namespace Glow.glow_tools{
                 //
                 Btn_Save.Text = " " + software_lang.TSReadLangs("SystemIDTool", "sit_save_btn");
                 Btn_Compare.Text = " " + software_lang.TSReadLangs("SystemIDTool", "sit_compare_btn");
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GTool_SystemIA_Preloader()"); }
             }
         }
         // LOAD
         // ======================================================================================================
-        private async void GlowSystemIDAnalysisTool_Load(object sender, EventArgs e){
-            try{
+        private async void GlowSystemIDAnalysisTool_Load(object sender, EventArgs e)
+        {
+            try
+            {
+                ApplyDpiScaling(this.DeviceDpi);
                 GTool_SystemIA_Preloader();
                 Btn_Save.Enabled = false;
                 Btn_Compare.Enabled = false;
@@ -111,6 +142,7 @@ namespace Glow.glow_tools{
                     Task.Run(SID_Processor),
                     Task.Run(SID_Motherboard),
                     Task.Run(SID_BIOS),
+                    Task.Run(SID_TPM),
                     Task.Run(SID_Memory),
                     Task.Run(SID_GPU),
                     Task.Run(SID_Monitor),
@@ -122,55 +154,70 @@ namespace Glow.glow_tools{
                 DGV_MainTable.ClearSelection();
                 Btn_Save.Enabled = true;
                 Btn_Compare.Enabled = true;
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GlowSystemIDAnalysisTool_Load()"); }
             }
         }
         // HARDWARE ID SAVE BTN
         // ======================================================================================================
-        private void Btn_Save_Click(object sender, EventArgs e){
-            try{
+        private void Btn_Save_Click(object sender, EventArgs e)
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
-                using (var folder_browser = new FolderBrowserDialog()){
+                using (var folder_browser = new FolderBrowserDialog())
+                {
                     folder_browser.Description = software_lang.TSReadLangs("SystemIDTool", "sit_save_info");
                     folder_browser.ShowNewFolderButton = false;
                     folder_browser.SelectedPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                    if (folder_browser.ShowDialog() == DialogResult.OK){
+                    if (folder_browser.ShowDialog() == DialogResult.OK)
+                    {
                         string save_file_name = string.Format(software_lang.TSReadLangs("SystemIDTool", "sit_file_name"), Application.ProductName);
                         string sha_name = string.Format(software_lang.TSReadLangs("SystemIDTool", "sit_sha_name") + " - " + DateTime.Now.ToString("dd.MM.yyyy - HH.mm.ss"), Application.ProductName);
                         string snapshot_name = string.Format(software_lang.TSReadLangs("SystemIDTool", "sit_snapshot_name") + " - " + DateTime.Now.ToString("dd.MM.yyyy - HH.mm.ss"), Application.ProductName);
                         string targetDir = Path.Combine(folder_browser.SelectedPath, save_file_name);
                         //
-                        if (!Directory.Exists(targetDir)){
+                        if (!Directory.Exists(targetDir))
+                        {
                             Directory.CreateDirectory(targetDir);
                         }
                         //
                         string shaPath = Path.Combine(targetDir, sha_name + ".sha256");
                         string glowPath = Path.Combine(targetDir, snapshot_name + ".glow");
-                        try{
+                        try
+                        {
                             File.WriteAllText(shaPath, $"{software_lang.TSReadLangs("SystemIDTool", "sit_sha_file_tag")}\n{new string('-', 65)}\n{BuildHardwareHash(BuildHardwareSnapshot())}");
                             File.WriteAllText(glowPath, $"{software_lang.TSReadLangs("SystemIDTool", "sit_snapshot_file_tag")}\n{new string('-', 65)}\n{BuildHardwareSnapshot()}");
-                        }catch (Exception ex){
+                        }
+                        catch (Exception ex)
+                        {
                             TS_MessageBoxEngine.TS_MessageBox(this, 3, string.Format(software_lang.TSReadLangs("SystemIDTool", "sit_after_failed"), ex.Message));
                             return;
                         }
                         //
                         var latest_message = TS_MessageBoxEngine.TS_MessageBox(this, 5, software_lang.TSReadLangs("SystemIDTool", "sit_after_message"));
-                        if (latest_message == DialogResult.Yes){
+                        if (latest_message == DialogResult.Yes)
+                        {
                             Process.Start("explorer.exe", targetDir);
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "Btn_Save_Click()"); }
             }
         }
         // BUILD HARDWARE SNAPSHOTS
         // ======================================================================================================
-        private string BuildHardwareSnapshot(){
-            var order = new[] { "CPU", "MOTHERBOARD", "BIOS", "MEMORY", "GPU", "MONITOR", "STORAGE", "BATTERY" };
+        private string BuildHardwareSnapshot()
+        {
+            var order = new[] { "CPU", "MOTHERBOARD", "BIOS", "TPM", "MEMORY", "GPU", "MONITOR", "STORAGE", "BATTERY" };
             var sb = new StringBuilder();
-            foreach (var key in order){
+            foreach (var key in order)
+            {
                 if (!hwBag.TryGetValue(key, out var bag) || bag.Count == 0) continue;
                 sb.Append($"|{key}:");
                 foreach (var val in bag.Distinct().OrderBy(x => x))
@@ -180,8 +227,10 @@ namespace Glow.glow_tools{
         }
         // BUILD HARDWARE HASH
         // ======================================================================================================
-        private string BuildHardwareHash(string snapshot){
-            using (var sha256 = SHA256.Create()){
+        private string BuildHardwareHash(string snapshot)
+        {
+            using (var sha256 = SHA256.Create())
+            {
                 var bytes = Encoding.UTF8.GetBytes(snapshot ?? string.Empty);
                 var hash = sha256.ComputeHash(bytes);
                 return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
@@ -189,39 +238,50 @@ namespace Glow.glow_tools{
         }
         // COMPARE HARDWARE BTN
         // ======================================================================================================
-        private void Btn_Compare_Click(object sender, EventArgs e){
-            try{
+        private void Btn_Compare_Click(object sender, EventArgs e)
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
-                using (OpenFileDialog get_compare_file = new OpenFileDialog()){
+                using (OpenFileDialog get_compare_file = new OpenFileDialog())
+                {
                     get_compare_file.Title = string.Format(software_lang.TSReadLangs("SystemIDTool", "sit_compare_filter_title"), Application.ProductName);
-                    get_compare_file.Filter = string.Format(software_lang.TSReadLangs("SystemIDTool", "sit_compare_filter_name"), Application.ProductName ,"|*.sha256;*.glow");
+                    get_compare_file.Filter = string.Format(software_lang.TSReadLangs("SystemIDTool", "sit_compare_filter_name"), Application.ProductName, "|*.sha256;*.glow");
                     get_compare_file.Multiselect = false;
                     get_compare_file.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                    if (get_compare_file.ShowDialog() != DialogResult.OK){
+                    if (get_compare_file.ShowDialog() != DialogResult.OK)
+                    {
                         return;
                     }
                     string[] get_lines = File.ReadAllLines(get_compare_file.FileName);
-                    if (get_lines.Length < 3){
+                    if (get_lines.Length < 3)
+                    {
                         TS_MessageBoxEngine.TS_MessageBox(this, 2, software_lang.TSReadLangs("SystemIDTool", "sit_compare_file_unvalid"));
                         return;
                     }
                     string get_t_line = get_lines[2].Trim();
                     // SHA-256 Control
-                    if (Regex.IsMatch(get_t_line, @"^[0-9a-fA-F]{64}$")){
-                        if (get_t_line.Equals(BuildHardwareHash(BuildHardwareSnapshot()), StringComparison.OrdinalIgnoreCase)){
+                    if (Regex.IsMatch(get_t_line, @"^[0-9a-fA-F]{64}$"))
+                    {
+                        if (get_t_line.Equals(BuildHardwareHash(BuildHardwareSnapshot()), StringComparison.OrdinalIgnoreCase))
+                        {
                             TS_MessageBoxEngine.TS_MessageBox(this, 1, software_lang.TSReadLangs("SystemIDTool", "sit_compare_sha_success"));
-                        }else{
+                        }
+                        else
+                        {
                             TS_MessageBoxEngine.TS_MessageBox(this, 3, string.Format(software_lang.TSReadLangs("SystemIDTool", "sit_compare_sha_failed"), "*.glow"));
                         }
                         return;
                     }
                     // Snapshot Control
-                    if (!get_t_line.StartsWith("|")){
+                    if (!get_t_line.StartsWith("|"))
+                    {
                         TS_MessageBoxEngine.TS_MessageBox(this, 2, software_lang.TSReadLangs("SystemIDTool", "sit_compare_snapshot_unvalid"));
                         return;
                     }
                     var validSnapshot = ParseHardwareSnapshot(get_t_line);
-                    if (validSnapshot.Count == 0){
+                    if (validSnapshot.Count == 0)
+                    {
                         TS_MessageBoxEngine.TS_MessageBox(this, 2, software_lang.TSReadLangs("SystemIDTool", "sit_compare_snapshot_unvalid"));
                         return;
                     }
@@ -235,12 +295,14 @@ namespace Glow.glow_tools{
         }
         // PARSE HARDWARE SNAPSHOTS
         // ======================================================================================================
-        private Dictionary<string, List<string>> ParseHardwareSnapshot(string snap_text){
+        private Dictionary<string, List<string>> ParseHardwareSnapshot(string snap_text)
+        {
             var end_result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             if (string.IsNullOrWhiteSpace(snap_text)) return end_result;
             snap_text = snap_text.Trim();
             var parts_mode = snap_text.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var part_single in parts_mode){
+            foreach (var part_single in parts_mode)
+            {
                 var idx = part_single.IndexOf(':');
                 if (idx <= 0 || idx >= part_single.Length - 1) continue;
                 var key = part_single.Substring(0, idx).Trim();
@@ -253,15 +315,18 @@ namespace Glow.glow_tools{
         }
         // COMPARE SNAPSHOTS
         // ======================================================================================================
-        private string CompareSnapshots(Dictionary<string, List<string>> oldSnap){
+        private string CompareSnapshots(Dictionary<string, List<string>> oldSnap)
+        {
             TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
-            try{
+            try
+            {
                 var sb_comp = new StringBuilder();
                 //
                 Dictionary<string, string> keyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase){
                     { "CPU", software_lang.TSReadLangs("SystemIDTool", "sit_processor_ui")},
                     { "MOTHERBOARD", software_lang.TSReadLangs("SystemIDTool", "sit_motherboard_ui") },
                     { "BIOS", software_lang.TSReadLangs("SystemIDTool", "sit_bios_ui") },
+                    { "TPM", software_lang.TSReadLangs("SystemIDTool", "sit_tpm_ui") },
                     { "MEMORY",software_lang.TSReadLangs("SystemIDTool", "sit_memory_ui") },
                     { "GPU", software_lang.TSReadLangs("SystemIDTool", "sit_gpu_ui") },
                     { "MONITOR", software_lang.TSReadLangs("SystemIDTool", "sit_monitor_ui") },
@@ -271,11 +336,13 @@ namespace Glow.glow_tools{
                 string LocalizeKey(string key) { return keyMap.TryGetValue(key, out string local) ? local : key; }
                 //
                 var allCats = new HashSet<string>(hwBag.Keys, StringComparer.OrdinalIgnoreCase);
-                if (oldSnap != null){
+                if (oldSnap != null)
+                {
                     foreach (var k in oldSnap.Keys) allCats.Add(k);
                 }
                 List<string> PipeMode(IEnumerable<string> seq) => seq.Select(x => x.Trim()).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
-                string NormalizationLocal(string s){
+                string NormalizationLocal(string s)
+                {
                     if (string.IsNullOrWhiteSpace(s))
                     {
                         return string.Empty;
@@ -284,215 +351,349 @@ namespace Glow.glow_tools{
                     return string.Join(";", parts);
                 }
                 //
-                foreach (var key in allCats.OrderBy(x => x)){
+                foreach (var key in allCats.OrderBy(x => x))
+                {
                     var current = hwBag.ContainsKey(key) ? PipeMode(hwBag[key].Select(x => NormalizationLocal(x))) : new List<string>();
                     oldSnap.TryGetValue(key, out var oldList);
                     oldList = oldList != null ? PipeMode(oldList.Select(x => NormalizationLocal(x))) : new List<string>();
                     var removed = oldList.Except(current, StringComparer.OrdinalIgnoreCase).ToList();
                     var added = current.Except(oldList, StringComparer.OrdinalIgnoreCase).ToList();
                     //
-                    if (removed.Count == 0 && added.Count == 0){
+                    if (removed.Count == 0 && added.Count == 0)
+                    {
                         continue;
                     }
                     //
                     sb_comp.AppendLine($"[ {LocalizeKey(key)} ]");
                     sb_comp.AppendLine(new string('-', 35));
-                    if (removed.Count > 0){
+                    if (removed.Count > 0)
+                    {
                         sb_comp.AppendLine("\n" + "- " + software_lang.TSReadLangs("SystemIDTool", "sit_removed") + "\n");
                         foreach (var r in removed) sb_comp.AppendLine('\u25CF' + " " + r);
                     }
-                    if (added.Count > 0){
+                    if (added.Count > 0)
+                    {
                         sb_comp.AppendLine("\n" + "+ " + software_lang.TSReadLangs("SystemIDTool", "sit_added") + "\n");
                         foreach (var a in added) sb_comp.AppendLine('\u25CF' + " " + a);
                     }
                     sb_comp.AppendLine();
                 }
                 return sb_comp.Length == 0 ? software_lang.TSReadLangs("SystemIDTool", "sit_compare_snapshot_success") : sb_comp.ToString().TrimEnd();
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "CompareSnapshots()"); }
                 return string.Format(software_lang.TSReadLangs("SystemIDTool", "sit_compare_snapshot_failed"), ex.Message);
             }
         }
         // SAFE UI THREAD
         // ======================================================================================================
-        private void AddRowSafe(string nameColumn, string valueColumn){
-            if (DGV_MainTable.InvokeRequired){
+        private void AddRowSafe(string nameColumn, string valueColumn)
+        {
+            if (DGV_MainTable.InvokeRequired)
+            {
                 DGV_MainTable.Invoke(new Action(() => DGV_MainTable.Rows.Add(nameColumn, valueColumn)));
-            }else{
+            }
+            else
+            {
                 DGV_MainTable.Rows.Add(nameColumn, valueColumn);
             }
         }
         // PROCESSOR SERIAL INFO
         // ======================================================================================================
-        private void SID_Processor(){
-            try{
+        private void SID_Processor()
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 using (var search_cpu = new ManagementObjectSearcher("root\\CIMV2", "SELECT ProcessorId FROM Win32_Processor"))
-                using (ManagementObjectCollection cpuResults = search_cpu.Get()){
-                    foreach (ManagementObject query_cpu in cpuResults.Cast<ManagementObject>()){
-                        using (query_cpu){
+                using (ManagementObjectCollection cpuResults = search_cpu.Get())
+                {
+                    foreach (ManagementObject query_cpu in cpuResults.Cast<ManagementObject>())
+                    {
+                        using (query_cpu)
+                        {
                             string cpu_unique_id = (string)query_cpu["ProcessorId"];
-                            if (!string.IsNullOrEmpty(cpu_unique_id)){
+                            if (!string.IsNullOrEmpty(cpu_unique_id))
+                            {
                                 hwBag["CPU"].Add(cpu_unique_id.Trim());
                                 AddRowSafe(software_lang.TSReadLangs("SystemIDTool", "sit_processor"), cpu_unique_id.Trim());
                             }
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SID_Processor()"); }
             }
         }
         // MOTHERBOARD SERIAL INFO
         // ======================================================================================================
-        private void SID_Motherboard(){
-            try{
+        private void SID_Motherboard()
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 using (var search_motherboard = new ManagementObjectSearcher("root\\CIMV2", "SELECT SerialNumber FROM Win32_BaseBoard"))
-                using (ManagementObjectCollection mbResults = search_motherboard.Get()){
-                    foreach (ManagementObject query_motherboard in mbResults.Cast<ManagementObject>()){
-                        using (query_motherboard){
+                using (ManagementObjectCollection mbResults = search_motherboard.Get())
+                {
+                    foreach (ManagementObject query_motherboard in mbResults.Cast<ManagementObject>())
+                    {
+                        using (query_motherboard)
+                        {
                             string motherboard_serial = (string)query_motherboard["SerialNumber"];
-                            if (!string.IsNullOrEmpty(motherboard_serial)){
+                            if (!string.IsNullOrEmpty(motherboard_serial))
+                            {
                                 hwBag["MOTHERBOARD"].Add(motherboard_serial.Trim());
                                 AddRowSafe(software_lang.TSReadLangs("SystemIDTool", "sit_motherboard"), motherboard_serial.Trim());
                             }
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SID_Motherboard()"); }
             }
         }
         // BIOS SERIAL INFO
         // ======================================================================================================
-        private void SID_BIOS(){
-            try{
+        private void SID_BIOS()
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 using (var search_bios = new ManagementObjectSearcher("root\\CIMV2", "SELECT SerialNumber FROM Win32_BIOS"))
-                using (ManagementObjectCollection biosResults = search_bios.Get()){
-                    foreach (ManagementObject query_bios in biosResults.Cast<ManagementObject>()){
-                        using (query_bios){
+                using (ManagementObjectCollection biosResults = search_bios.Get())
+                {
+                    foreach (ManagementObject query_bios in biosResults.Cast<ManagementObject>())
+                    {
+                        using (query_bios)
+                        {
                             string bios_serial = (string)query_bios["SerialNumber"];
-                            if (!string.IsNullOrEmpty(bios_serial)){
+                            if (!string.IsNullOrEmpty(bios_serial))
+                            {
                                 hwBag["BIOS"].Add(bios_serial.Trim());
                                 AddRowSafe(software_lang.TSReadLangs("SystemIDTool", "sit_bios"), bios_serial.Trim());
                             }
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SID_BIOS()"); }
             }
         }
         // MEMORY SERIAL INFO
         // ======================================================================================================
-        private void SID_Memory(){
-            try{
+        private void SID_Memory()
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 using (var search_memory = new ManagementObjectSearcher("root\\CIMV2", "SELECT SerialNumber FROM Win32_PhysicalMemory"))
-                using (ManagementObjectCollection memResults = search_memory.Get()){
-                    foreach (ManagementObject query_memory in memResults.Cast<ManagementObject>()){
-                        using (query_memory){
+                using (ManagementObjectCollection memResults = search_memory.Get())
+                {
+                    foreach (ManagementObject query_memory in memResults.Cast<ManagementObject>())
+                    {
+                        using (query_memory)
+                        {
                             string memory_serial = (string)query_memory["SerialNumber"];
-                            if (!string.IsNullOrEmpty(memory_serial)){
+                            if (!string.IsNullOrEmpty(memory_serial))
+                            {
                                 hwBag["MEMORY"].Add(memory_serial.Trim());
                                 AddRowSafe(software_lang.TSReadLangs("SystemIDTool", "sit_memory"), memory_serial.Trim());
                             }
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SID_Memory()"); }
             }
         }
         // GPU PNP DEVICE ID INFO
         // ======================================================================================================
-        private void SID_GPU(){
-            try{
+        private void SID_GPU()
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 using (var search_gpu = new ManagementObjectSearcher("root\\CIMV2", "SELECT PNPDeviceID FROM Win32_VideoController"))
-                using (ManagementObjectCollection gpuResults = search_gpu.Get()){
-                    foreach (ManagementObject query_gpu in gpuResults.Cast<ManagementObject>()){
-                        using (query_gpu){
+                using (ManagementObjectCollection gpuResults = search_gpu.Get())
+                {
+                    foreach (ManagementObject query_gpu in gpuResults.Cast<ManagementObject>())
+                    {
+                        using (query_gpu)
+                        {
                             string gpu_pnp_device_id = (string)query_gpu["PNPDeviceID"];
-                            if (!string.IsNullOrEmpty(gpu_pnp_device_id)){
+                            if (!string.IsNullOrEmpty(gpu_pnp_device_id))
+                            {
                                 hwBag["GPU"].Add(gpu_pnp_device_id.Trim());
                                 AddRowSafe(software_lang.TSReadLangs("SystemIDTool", "sit_gpu"), gpu_pnp_device_id.Trim());
                             }
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SID_GPU()"); }
             }
         }
         // MONITOR SERIAL ID INFO
         // ======================================================================================================
-        private void SID_Monitor(){
-            try{
+        private void SID_Monitor()
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 using (var search_monitor = new ManagementObjectSearcher(@"root\WMI", "SELECT SerialNumberID FROM WmiMonitorID"))
-                using (ManagementObjectCollection monResults = search_monitor.Get()){
-                    foreach (ManagementObject query_monitor in monResults.Cast<ManagementObject>()){
-                        using (query_monitor){
+                using (ManagementObjectCollection monResults = search_monitor.Get())
+                {
+                    foreach (ManagementObject query_monitor in monResults.Cast<ManagementObject>())
+                    {
+                        using (query_monitor)
+                        {
                             string monitor_serial = GlowMain.GetMonitorFromUShortArray((ushort[])query_monitor["SerialNumberID"]);
-                            if (!string.IsNullOrEmpty(monitor_serial)) {
+                            if (!string.IsNullOrEmpty(monitor_serial))
+                            {
                                 hwBag["MONITOR"].Add(monitor_serial.Trim());
                                 AddRowSafe(software_lang.TSReadLangs("SystemIDTool", "sit_monitor"), monitor_serial.Trim());
                             }
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SID_Monitor()"); }
             }
         }
         // STORAGE SERIAL INFO
         // ======================================================================================================
-        private void SID_Storage(){
-            try{
+        private void SID_Storage()
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 using (var search_storage = new ManagementObjectSearcher("root\\CIMV2", "SELECT SerialNumber FROM Win32_DiskDrive"))
-                using (ManagementObjectCollection stResults = search_storage.Get()){
-                    foreach (ManagementObject query_storage in stResults.Cast<ManagementObject>()){
-                        using (query_storage){
+                using (ManagementObjectCollection stResults = search_storage.Get())
+                {
+                    foreach (ManagementObject query_storage in stResults.Cast<ManagementObject>())
+                    {
+                        using (query_storage)
+                        {
                             string disk_serial = (string)query_storage["SerialNumber"];
-                            if (!string.IsNullOrEmpty(disk_serial)){
+                            if (!string.IsNullOrEmpty(disk_serial))
+                            {
                                 hwBag["STORAGE"].Add(disk_serial.Trim());
                                 AddRowSafe(software_lang.TSReadLangs("SystemIDTool", "sit_storage"), disk_serial.Trim());
                             }
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SID_Storage()"); }
             }
         }
         // BATTERY SERIAL INFO
         // ======================================================================================================
-        private void SID_Battery(){
-            try{
+        private void SID_Battery()
+        {
+            try
+            {
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 using (var search_battery = new ManagementObjectSearcher("root\\WMI", "SELECT SerialNumber FROM BatteryStaticData"))
-                using (ManagementObjectCollection batResults = search_battery.Get()){
-                    foreach (ManagementObject query_battery in batResults.Cast<ManagementObject>()){
-                        using (query_battery){
+                using (ManagementObjectCollection batResults = search_battery.Get())
+                {
+                    foreach (ManagementObject query_battery in batResults.Cast<ManagementObject>())
+                    {
+                        using (query_battery)
+                        {
                             string battery_serial = (string)query_battery["SerialNumber"];
-                            if (!string.IsNullOrEmpty(battery_serial)){
+                            if (!string.IsNullOrEmpty(battery_serial))
+                            {
                                 hwBag["BATTERY"].Add(battery_serial.Trim());
                                 AddRowSafe(software_lang.TSReadLangs("SystemIDTool", "sit_battery"), battery_serial.Trim());
                             }
                         }
                     }
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SID_Battery()"); }
+            }
+        }
+        // TPM ID INFO
+        // No row is added if the device has no TPM or it is not active.
+        // ======================================================================================================
+        private void SID_TPM()
+        {
+            try
+            {
+                TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
+                using (var search_tpm = new ManagementObjectSearcher("root\\CIMV2\\Security\\MicrosoftTpm", "SELECT IsActivated_InitialValue, IsEnabled_InitialValue, ManufacturerId FROM Win32_Tpm"))
+                using (ManagementObjectCollection tpmResults = search_tpm.Get())
+                {
+                    foreach (ManagementObject query_tpm in tpmResults.Cast<ManagementObject>())
+                    {
+                        using (query_tpm)
+                        {
+                            bool tpm_active = false;
+                            try
+                            {
+                                tpm_active = Convert.ToBoolean(query_tpm["IsActivated_InitialValue"]);
+                            }
+                            catch
+                            {
+                                continue;
+                            }
+                            if (tpm_active != true)
+                            {
+                                continue;
+                            }
+                            try
+                            {
+                                if (query_tpm["IsEnabled_InitialValue"] != null)
+                                {
+                                    bool tpm_enabled = Convert.ToBoolean(query_tpm["IsEnabled_InitialValue"]);
+                                    if (tpm_enabled != true)
+                                    {
+                                        continue;
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // If IsEnabled cannot be read, the activation check is sufficient
+                            }
+                            string tpm_unique_id = Convert.ToString(query_tpm["ManufacturerId"])?.Trim() ?? string.Empty;
+                            if (string.IsNullOrEmpty(tpm_unique_id) || tpm_unique_id == "0")
+                            {
+                                continue;
+                            }
+                            hwBag["TPM"].Add(tpm_unique_id);
+                            AddRowSafe(software_lang.TSReadLangs("SystemIDTool", "sit_tpm"), tpm_unique_id);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "SID_TPM()"); }
             }
         }
         // NATURAL SORTING
         // ======================================================================================================
-        private void SortGridNatural(){
+        private void SortGridNatural()
+        {
             var rows = DGV_MainTable.Rows.Cast<DataGridViewRow>().Where(r => !r.IsNewRow).Select(r => new { Name = r.Cells[0].Value?.ToString() ?? "", Value = r.Cells[1].Value?.ToString() }).OrderBy(x => TSNaturalSortKey(x.Name)).ToList();
             DGV_MainTable.Rows.Clear();
             foreach (var item in rows)

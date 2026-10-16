@@ -703,6 +703,26 @@ namespace Glow.Properties {
         /// <summary>
         ///   System.Drawing.Bitmap türünde yerelleştirilmiş bir kaynak arar.
         /// </summary>
+        internal static System.Drawing.Bitmap cx_port_scanner_dark {
+            get {
+                object obj = ResourceManager.GetObject("cx_port_scanner_dark", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   System.Drawing.Bitmap türünde yerelleştirilmiş bir kaynak arar.
+        /// </summary>
+        internal static System.Drawing.Bitmap cx_port_scanner_light {
+            get {
+                object obj = ResourceManager.GetObject("cx_port_scanner_light", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   System.Drawing.Bitmap türünde yerelleştirilmiş bir kaynak arar.
+        /// </summary>
         internal static System.Drawing.Bitmap cx_sfc_and_dism_dark {
             get {
                 object obj = ResourceManager.GetObject("cx_sfc_and_dism_dark", resourceCulture);
@@ -1400,14 +1420,5 @@ namespace Glow.Properties {
             }
         }
         
-        /// <summary>
-        ///   System.Drawing.Bitmap türünde yerelleştirilmiş bir kaynak arar.
-        /// </summary>
-        internal static System.Drawing.Bitmap ts_close {
-            get {
-                object obj = ResourceManager.GetObject("ts_close", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
     }
 }

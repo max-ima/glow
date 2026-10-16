@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GlowBenchCPUTool));
             this.Bench_BG_Panel = new System.Windows.Forms.Panel();
             this.BtnPanel = new System.Windows.Forms.Panel();
             this.Bench_Start = new Glow.TSCustomButton();
@@ -193,24 +192,16 @@
             // 
             // Bench_ModeSelector_List
             // 
-            this.Bench_ModeSelector_List.ArrowColor = System.Drawing.SystemColors.WindowText;
-            this.Bench_ModeSelector_List.BorderColor = System.Drawing.SystemColors.ControlDark;
-            this.Bench_ModeSelector_List.ButtonColor = System.Drawing.SystemColors.ControlDark;
             this.Bench_ModeSelector_List.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.Bench_ModeSelector_List.DisabledBackColor = System.Drawing.SystemColors.Control;
-            this.Bench_ModeSelector_List.DisabledButtonColor = System.Drawing.SystemColors.ControlDark;
-            this.Bench_ModeSelector_List.DisabledForeColor = System.Drawing.SystemColors.GrayText;
             this.Bench_ModeSelector_List.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.Bench_ModeSelector_List.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.Bench_ModeSelector_List.FocusedBorderColor = System.Drawing.Color.DodgerBlue;
-            this.Bench_ModeSelector_List.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold);
+            this.Bench_ModeSelector_List.Font = new System.Drawing.Font("Segoe UI Semibold", 10.75F, System.Drawing.FontStyle.Bold);
             this.Bench_ModeSelector_List.FormattingEnabled = true;
-            this.Bench_ModeSelector_List.HoverBackColor = System.Drawing.SystemColors.Window;
-            this.Bench_ModeSelector_List.HoverButtonColor = System.Drawing.SystemColors.ControlDark;
+            this.Bench_ModeSelector_List.ItemHeight = 27;
             this.Bench_ModeSelector_List.Location = new System.Drawing.Point(14, 39);
             this.Bench_ModeSelector_List.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.Bench_ModeSelector_List.Name = "Bench_ModeSelector_List";
-            this.Bench_ModeSelector_List.Size = new System.Drawing.Size(214, 28);
+            this.Bench_ModeSelector_List.Size = new System.Drawing.Size(214, 33);
             this.Bench_ModeSelector_List.TabIndex = 1;
             // 
             // Bench_ModeSelector
@@ -280,24 +271,16 @@
             // 
             // Bench_TimeSelector_List
             // 
-            this.Bench_TimeSelector_List.ArrowColor = System.Drawing.SystemColors.WindowText;
-            this.Bench_TimeSelector_List.BorderColor = System.Drawing.SystemColors.ControlDark;
-            this.Bench_TimeSelector_List.ButtonColor = System.Drawing.SystemColors.ControlDark;
             this.Bench_TimeSelector_List.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.Bench_TimeSelector_List.DisabledBackColor = System.Drawing.SystemColors.Control;
-            this.Bench_TimeSelector_List.DisabledButtonColor = System.Drawing.SystemColors.ControlDark;
-            this.Bench_TimeSelector_List.DisabledForeColor = System.Drawing.SystemColors.GrayText;
             this.Bench_TimeSelector_List.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.Bench_TimeSelector_List.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.Bench_TimeSelector_List.FocusedBorderColor = System.Drawing.Color.DodgerBlue;
-            this.Bench_TimeSelector_List.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold);
+            this.Bench_TimeSelector_List.Font = new System.Drawing.Font("Segoe UI Semibold", 10.75F, System.Drawing.FontStyle.Bold);
             this.Bench_TimeSelector_List.FormattingEnabled = true;
-            this.Bench_TimeSelector_List.HoverBackColor = System.Drawing.SystemColors.Window;
-            this.Bench_TimeSelector_List.HoverButtonColor = System.Drawing.SystemColors.ControlDark;
+            this.Bench_TimeSelector_List.ItemHeight = 27;
             this.Bench_TimeSelector_List.Location = new System.Drawing.Point(14, 39);
             this.Bench_TimeSelector_List.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.Bench_TimeSelector_List.Name = "Bench_TimeSelector_List";
-            this.Bench_TimeSelector_List.Size = new System.Drawing.Size(214, 28);
+            this.Bench_TimeSelector_List.Size = new System.Drawing.Size(214, 33);
             this.Bench_TimeSelector_List.TabIndex = 1;
             this.Bench_TimeSelector_List.SelectedIndexChanged += new System.EventHandler(this.Bench_TimeSelector_List_SelectedIndexChanged);
             // 
@@ -305,13 +288,13 @@
             // 
             this.Bench_TimeCustom.BackColor = System.Drawing.Color.WhiteSmoke;
             this.Bench_TimeCustom.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.Bench_TimeCustom.Font = new System.Drawing.Font("Segoe UI Semibold", 10.5F, System.Drawing.FontStyle.Bold);
+            this.Bench_TimeCustom.Font = new System.Drawing.Font("Segoe UI Semibold", 10.75F, System.Drawing.FontStyle.Bold);
             this.Bench_TimeCustom.ForeColor = System.Drawing.Color.Black;
-            this.Bench_TimeCustom.Location = new System.Drawing.Point(236, 40);
+            this.Bench_TimeCustom.Location = new System.Drawing.Point(236, 42);
             this.Bench_TimeCustom.Margin = new System.Windows.Forms.Padding(3, 3, 0, 3);
             this.Bench_TimeCustom.MaxLength = 5;
             this.Bench_TimeCustom.Name = "Bench_TimeCustom";
-            this.Bench_TimeCustom.Size = new System.Drawing.Size(60, 26);
+            this.Bench_TimeCustom.Size = new System.Drawing.Size(60, 27);
             this.Bench_TimeCustom.TabIndex = 2;
             this.Bench_TimeCustom.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.Bench_TimeCustom_TextBox_KeyPress);
             // 
@@ -368,7 +351,7 @@
             this.Bench_CPUCores.TabIndex = 1;
             this.Bench_CPUCores.Text = "CPU Feature";
             // 
-            // GlowBenchCPU
+            // GlowBenchCPUTool
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
@@ -377,9 +360,9 @@
             this.Controls.Add(this.Bench_BG_Panel);
             this.DoubleBuffered = true;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.Icon = Properties.Resources.GlowLogo;
+            this.Icon = global::Glow.Properties.Resources.GlowLogo;
             this.MaximizeBox = false;
-            this.Name = "GlowBenchCPU";
+            this.Name = "GlowBenchCPUTool";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "GlowCPUBench";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.GlowBenchCPU_FormClosing);

@@ -7,9 +7,12 @@ using System.Windows.Forms;
 //
 using static Glow.TSModules;
 
-namespace Glow.glow_tools{
-    public partial class GlowWallpaperPreviewTool : Form{
-        public GlowWallpaperPreviewTool(){
+namespace Glow.glow_tools
+{
+    public partial class GlowWallpaperPreviewTool : Form
+    {
+        public GlowWallpaperPreviewTool()
+        {
             InitializeComponent();
             //
             GTool_WP_Preloader();
@@ -17,20 +20,42 @@ namespace Glow.glow_tools{
             ImageDGV.ColumnHeadersVisible = false;
             ImageDGV.Columns.Add("WallpaperPref", "Pref");
             ImageDGV.Columns.Add("WallpaperVal", "Value");
-            ImageDGV.Columns[0].Width = (int)(175 * this.DeviceDpi / 96f);
-            ImageDGV.RowTemplate.Height = (int)(32 * this.DeviceDpi / 96f);
-            foreach (DataGridViewColumn columnPadding in ImageDGV.Columns){
-                int scaledPadding = (int)(3 * this.DeviceDpi / 96f);
-                columnPadding.DefaultCellStyle.Padding = new Padding(scaledPadding, 0, 0, 0);
+            ApplyDpiScaling(this.DeviceDpi);
+        }
+        // UI DPI (shared standard: TSDpiHelper)
+        // ======================================================================================================
+        private void ApplyDpiScaling(int dpi)
+        {
+            if (IsDisposed || Disposing) return;
+            if (dpi <= 0) dpi = TSDpiHelper.BaseDpi;
+            TSDpiHelper.ScaleDataGridView(ImageDGV, new[] { 175 }, 32, dpiOverride: dpi);
+        }
+        protected override void OnDpiChanged(DpiChangedEventArgs e)
+        {
+            base.OnDpiChanged(e);
+            try
+            {
+                ApplyDpiScaling(e.DeviceDpiNew);
+                GTool_WP_Preloader();
+                this.PerformLayout();
+                this.Invalidate(true);
+            }
+            catch (Exception ex)
+            {
+                if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "OnDpiChanged()"); }
             }
         }
         // THEME SETTINGS
         // ======================================================================================================
-        public void GTool_WP_Preloader(){
-            try{
+        public void GTool_WP_Preloader()
+        {
+            try
+            {
                 TSThemeModeHelper.InitializeThemeForForm(this);
                 //
                 BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor");
+                BackPanel.BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor");
+                WPImage.BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor");
                 //
                 ImageDGV.EnableHeadersVisualStyles = false;
                 ImageDGV.BackgroundColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor");
@@ -45,8 +70,10 @@ namespace Glow.glow_tools{
                 ImageDGV.DefaultCellStyle.SelectionForeColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_LabelColor1");
                 ImageDGV.ReadOnly = true;
                 //
-                foreach (Control ui_buttons in BackPanel.Controls){
-                    if (ui_buttons is Button open_btn){
+                foreach (Control ui_buttons in BackPanel.Controls)
+                {
+                    if (ui_buttons is Button open_btn)
+                    {
                         open_btn.ForeColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_BGColor2");
                         open_btn.BackColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_AccentColor");
                         open_btn.FlatAppearance.BorderColor = TS_ThemeEngine.ColorMode(GlowMain.theme, "TSBT_AccentColor");
@@ -61,24 +88,37 @@ namespace Glow.glow_tools{
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 Text = string.Format(software_lang.TSReadLangs("WallpaperPreviewTool", "wpt_title"), Application.ProductName);
                 BtnWallpaperLocationBtn.Text = " " + software_lang.TSReadLangs("WallpaperPreviewTool", "wpt_btn");
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GTool_WP_Preloader()"); }
             }
         }
         // LOAD
         // ======================================================================================================
-        private void GlowWallpaperPreviewTool_Load(object sender, EventArgs e){
-            try{
+        private void GlowWallpaperPreviewTool_Load(object sender, EventArgs e)
+        {
+            try
+            {
+                // Ctor'daki Preloader handle-oncesi 96 ile uretti; handle sonrasi dogrusu icin tekrar.
+                GTool_WP_Preloader();
                 Task.Run(AsyncLoadWallpaper);
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GlowWallpaperPreviewTool_Load()"); }
             }
         }
-        private void AsyncLoadWallpaper(){
-            try{
-                if (string.IsNullOrWhiteSpace(GlowMain.wp_rotate) || !File.Exists(GlowMain.wp_rotate)){
-                    if (!IsDisposed && IsHandleCreated){
-                        BeginInvoke(new Action(() => {
+        private void AsyncLoadWallpaper()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(GlowMain.wp_rotate) || !File.Exists(GlowMain.wp_rotate))
+                {
+                    if (!IsDisposed && IsHandleCreated)
+                    {
+                        BeginInvoke(new Action(() =>
+                        {
                             if (IsDisposed || !IsHandleCreated) return;
                             TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                             TS_MessageBoxEngine.TS_MessageBox(this, 2, software_lang.TSReadLangs("Os_Content", "os_c_wallpaper_open_error"));
@@ -88,37 +128,51 @@ namespace Glow.glow_tools{
                     return;
                 }
                 GetWallpaperInfo(GlowMain.wp_rotate);
-                byte[] bytes = File.ReadAllBytes(GlowMain.wp_rotate);
                 Image img;
-                using (var ms = new MemoryStream(bytes))
-                using (var temp = Image.FromStream(ms)){
+                using (var fs = new FileStream(GlowMain.wp_rotate, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var temp = Image.FromStream(fs, false, false))
+                {
                     img = new Bitmap(temp);
                 }
-                if (WPImage.IsHandleCreated && !WPImage.IsDisposed){
-                    WPImage.BeginInvoke(new Action(() =>{
-                        try{
-                            if (WPImage.IsDisposed || !WPImage.IsHandleCreated){ img.Dispose(); return; }
+                if (WPImage.IsHandleCreated && !WPImage.IsDisposed)
+                {
+                    WPImage.BeginInvoke(new Action(() =>
+                    {
+                        try
+                        {
+                            if (WPImage.IsDisposed || !WPImage.IsHandleCreated) { img.Dispose(); return; }
                             SetPictureBoxImage(WPImage, img);
-                        }finally{
-                            try{ img.Dispose(); }catch { }
+                        }
+                        finally
+                        {
+                            try { img.Dispose(); } catch { }
                         }
                     }));
-                }else{
+                }
+                else
+                {
                     img.Dispose();
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "AsyncLoadWallpaper()"); }
             }
         }
-        private void GetWallpaperInfo(string path){
+        private void GetWallpaperInfo(string path)
+        {
             if (!File.Exists(path)) return;
             string res = "-";
-            try{
+            try
+            {
                 using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var img = Image.FromStream(fs, false, false)){
+                using (var img = Image.FromStream(fs, false, false))
+                {
                     res = $"{img.Width}x{img.Height}";
                 }
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "GetWallpaperInfo()"); }
             }
             if (ImageDGV.IsDisposed) return;
@@ -128,7 +182,8 @@ namespace Glow.glow_tools{
             else
                 addRows();
         }
-        private void AddRowsToDGV(FileInfo fi, string img_res){
+        private void AddRowsToDGV(FileInfo fi, string img_res)
+        {
             TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
             ImageDGV.Rows.Add(software_lang.TSReadLangs("WallpaperPreviewTool", "wpt_file_name"), Path.GetFileNameWithoutExtension(fi.FullName));
             ImageDGV.Rows.Add(software_lang.TSReadLangs("WallpaperPreviewTool", "wpt_extension"), fi.Extension);
@@ -140,12 +195,16 @@ namespace Glow.glow_tools{
         }
         // OPEN WALLPAPER TO EXPLORER
         // ======================================================================================================
-        private void BtnWallpaperLocationBtn_Click(object sender, EventArgs e){
-            try{
+        private void BtnWallpaperLocationBtn_Click(object sender, EventArgs e)
+        {
+            try
+            {
                 string wallpaper_start_path = string.Format("/select, \"{0}\"", GlowMain.wp_rotate.Trim().Replace("/", @"\"));
                 ProcessStartInfo psi = new ProcessStartInfo("explorer.exe", wallpaper_start_path);
                 Process.Start(psi);
-            }catch (Exception ex){
+            }
+            catch (Exception ex)
+            {
                 if (GlowMain.debug_status) { TSErrorLog.LogException(ex, "BtnWallpaperLocationBtn_Click()"); }
                 TSGetLangs software_lang = new TSGetLangs(GlowMain.lang_path);
                 TS_MessageBoxEngine.TS_MessageBox(this, 3, software_lang.TSReadLangs("Os_Content", "os_c_wallpaper_open_error"));
@@ -153,12 +212,14 @@ namespace Glow.glow_tools{
         }
         // CLEAR SELECTION
         // ======================================================================================================
-        private void ImageDGV_SelectionChanged(object sender, EventArgs e){
+        private void ImageDGV_SelectionChanged(object sender, EventArgs e)
+        {
             ImageDGV.ClearSelection();
         }
         // DISPOSE AND EXIT
         // ======================================================================================================
-        private void GlowWallpaperPreview_FormClosing(object sender, FormClosingEventArgs e){
+        private void GlowWallpaperPreview_FormClosing(object sender, FormClosingEventArgs e)
+        {
             SetPictureBoxImage(WPImage, null);
         }
     }

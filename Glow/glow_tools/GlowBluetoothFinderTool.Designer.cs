@@ -82,30 +82,18 @@
             // 
             // BTSelector
             // 
-            this.BTSelector.ArrowColor = System.Drawing.SystemColors.WindowText;
-            this.BTSelector.BorderColor = System.Drawing.SystemColors.ControlDark;
-            this.BTSelector.ButtonColor = System.Drawing.SystemColors.ControlDark;
             this.BTSelector.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.BTSelector.DisabledArrowColor = System.Drawing.SystemColors.GrayText;
-            this.BTSelector.DisabledBackColor = System.Drawing.SystemColors.Control;
-            this.BTSelector.DisabledButtonColor = System.Drawing.SystemColors.ControlDark;
-            this.BTSelector.DisabledForeColor = System.Drawing.SystemColors.GrayText;
             this.BTSelector.Dock = System.Windows.Forms.DockStyle.Top;
             this.BTSelector.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.BTSelector.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.BTSelector.Enabled = false;
-            this.BTSelector.FocusedBorderColor = System.Drawing.Color.DodgerBlue;
-            this.BTSelector.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold);
+            this.BTSelector.Font = new System.Drawing.Font("Segoe UI Semibold", 10.75F, System.Drawing.FontStyle.Bold);
             this.BTSelector.FormattingEnabled = true;
-            this.BTSelector.HoverBackColor = System.Drawing.SystemColors.Window;
-            this.BTSelector.HoverButtonColor = System.Drawing.SystemColors.ControlDark;
-            this.BTSelector.HoverForeColor = System.Drawing.SystemColors.WindowText;
+            this.BTSelector.ItemHeight = 27;
             this.BTSelector.Location = new System.Drawing.Point(10, 10);
             this.BTSelector.Margin = new System.Windows.Forms.Padding(3, 3, 10, 25);
             this.BTSelector.Name = "BTSelector";
-            this.BTSelector.SelectedBackColor = System.Drawing.SystemColors.Highlight;
-            this.BTSelector.SelectedForeColor = System.Drawing.SystemColors.HighlightText;
-            this.BTSelector.Size = new System.Drawing.Size(764, 28);
+            this.BTSelector.Size = new System.Drawing.Size(764, 33);
             this.BTSelector.TabIndex = 0;
             this.BTSelector.SelectedIndexChanged += new System.EventHandler(this.BTSelector_SelectedIndexChanged);
             // 
